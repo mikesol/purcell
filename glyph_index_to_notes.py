@@ -2,7 +2,7 @@ from sqlalchemy import case, Column, Integer, select
 
 def E(_13) :
   ####################################
-  # assign glyph_index
+  # assign glyph_index to notes
 
   glyph_indexless_notes =\
     _13.last_outerjoin(
@@ -15,10 +15,7 @@ def E(_13) :
       with_labels().\
       subquery('glyph_indexless_notes')
 
-  Glyph_indexless_notes = _13.map(glyph_indexless_notes,
-                                  "glyph_indexless_notes",
-                                  Column('id', Integer, primary_key=True),
-                                  _13.Duration_log)
+  Glyph_indexless_notes = _13.reflect(glyph_indexless_notes, _13.Duration_log)
 
   glyph_indexless_ands =\
     [(Glyph_indexless_notes.duration_log__val == 1, 149),

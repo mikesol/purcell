@@ -24,8 +24,9 @@ SQL['counter'] = _13.make_counter()
 
 SQL['engravers'] = []
 ####################################
-import first_clef_on_staves
-SQL['engravers'].append(first_clef_on_staves.E(_13))
+import first_or_last_needle_on_staves
+SQL['engravers'].append(first_or_last_needle_on_staves.E(_13, "clef"))
+SQL['engravers'].append(first_or_last_needle_on_staves.E(_13, "staff_symbol"))
 
 import end_to_durations
 SQL['engravers'].append(end_to_durations.E(_13))
@@ -35,6 +36,15 @@ SQL['engravers'].append(duration_log_to_notes.E(_13))
 
 import glyph_index_to_notes
 SQL['engravers'].append(glyph_index_to_notes.E(_13))
+
+import clef_type_to_clefs
+SQL['engravers'].append(clef_type_to_clefs.E(_13))
+
+import glyph_index_to_clefs
+SQL['engravers'].append(glyph_index_to_clefs.E(_13))
+
+import end_to_last_endless_staff_symbol
+SQL['engravers'].append(end_to_last_endless_staff_symbol.E(_13))
 
 ########################################
 ##########################################
@@ -73,6 +83,13 @@ CUR = conn.execute(SQL['counter']).fetchall()[0][0]
 while LAST != CUR :
   LAST = CUR
   for ENGRAVER in SQL['engravers'] :
+    for elt in ENGRAVER.get('debug', []) :
+      print "****************************************************"
+      print "DEBUGGING"
+      print "****************************************************"
+      print elt
+      for row in conn.execute(elt).fetchall() :
+        print row
     for elt in ENGRAVER.get('inserter', []) :
       conn.execute(elt)
     for elt in ENGRAVER.get('pointer', []) :
@@ -81,5 +98,5 @@ while LAST != CUR :
       conn.execute(elt)
   CUR = conn.execute(SQL['counter']).fetchall()[0][0]
 
-for row in conn.execute(select([_13.t(_13.Glyph_index)])).fetchall() :
+for row in conn.execute(select([_13.t(_13.End)])).fetchall() :
   print row

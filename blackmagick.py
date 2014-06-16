@@ -1,4 +1,5 @@
-from sqlalchemy import MetaData, Table, Integer, Float, String, Column, func, alias, select, insert, update, union_all
+from sqlalchemy import MetaData, Table, Integer, Float, String, Column
+from sqlalchemy import func, alias, select, insert, update, union_all, and_
 from sqlalchemy.orm import mapper, aliased
 from sqlalchemy.orm import composite, column_property, relationship
 from abc import ABCMeta, abstractmethod
@@ -27,9 +28,7 @@ def _get_table(n) :
   elif type(n) == type(select().cte()) :
     return n
   else :
-    print n.__class__
-    print n
-    raise ValueError("ugggghhhhhhhh", n)
+    raise ValueError("ugggghhhhhhhh", str(n))
 
 def _get_table_or_constant(n) :
   if isinstance(n, Table) :
@@ -195,7 +194,9 @@ class FractionPattern(Pattern) :
     return {'val': composite(_Fraction, table.c.num, table.c.den,
                              comparator_factory = FractionComparator),
             'min': column_property(func.min(1.0 * table.c.num / table.c.den)),
-            'max': column_property(func.max(1.0 * table.c.num / table.c.den))}
+            'max': column_property(func.max(1.0 * table.c.num / table.c.den)),
+            'float': column_property(1.0 * table.c.num / table.c.den),
+            }
   @staticmethod
   def gcd_table(table) :
     table_al = table.alias(name='fraction_gcd_first')
@@ -212,19 +213,34 @@ class FractionPattern(Pattern) :
     modulo = modulo.union_all(
         select([
             (modulo_a.c.id + 1).label('id'),
-            modulo_a.c.raw_id,
+            modulo_a.c.raw_id.label('raw_id'),
             (modulo_a.c.den % modulo_a.c.num).label('prev'),
             modulo_a.c.num.label('next')
         ]).\
             where(modulo_a.c.num > 0)
     )
 
-    stmt = select([table.c.id.label('id'), (table.c.num / modulo.c.den).label('num'), (table.c.den / modulo.c.den).label('den')]).\
+    greatest_ids = select([func.max(modulo.c.id).label('id'),
+                           modulo.c.raw_id.label('raw_id')]).\
+        group_by(modulo.c.raw_id).\
+        cte(name = "correct_gcd_ids")
+
+    joined_gcd = select([modulo.c.raw_id.label('id'),
+                           modulo.c.den.label('divisor')]).\
+        select_from(greatest_ids.join(modulo,
+                      onclause = and_(greatest_ids.c.id == modulo.c.id,
+                                  greatest_ids.c.raw_id == modulo.c.raw_id))).\
+        cte(name = "joined_gcd")
+
+    stmt = select([joined_gcd.c.id.label('reduced_fraction_id'),
+                   (table.c.num / joined_gcd.c.divisor).label('reduced_fraction_num'),
+                   (table.c.den / joined_gcd.c.divisor).label('reduced_fraction_den')]).\
       select_from(
         table.\
-          join(modulo, onclause=table.c.id == modulo.c.raw_id)).order_by(modulo.c.id).group_by(modulo.c.raw_id)
+          join(joined_gcd, onclause = table.c.id == joined_gcd.c.id))
 
     return stmt
+
   @staticmethod
   def op(table1, table2, num, den, op_name) :
     return FractionPattern.gcd_table(
@@ -342,6 +358,11 @@ class BlackMagick(object) :
         setattr(self, method,
           MethodType(closure(), self, type(self)))
       getattr(self, '_'+method+'s')[pattern] = getattr(pattern, method)
+  def reflect(self, stmt, kls) :
+    return self.map(stmt,
+                    stmt.name,
+                    Column('id', Integer, primary_key=True),
+                    kls)
   def map(self, table_or_metadata, name, *args) :
     '''
     can either return a mapping to a new table if a metatable is provided
@@ -352,7 +373,12 @@ class BlackMagick(object) :
     properties = {}
     for arg in args :
       if isinstance(arg, Column) :
-        columns.append(arg)
+        if isinstance(table_or_metadata, MetaData) :
+          columns.append(arg)
+        else :
+          #  UGGGGH
+          search_items = [arg.name] if '__' not in arg.name else arg.name.split('__')
+          columns.append(BlackMagick.col(table_or_metadata.c, *search_items))
         column_names.append(arg.name)
       elif hasattr(arg.__table__.c, 'val') :
         cname = arg.__table__.name+"__val"

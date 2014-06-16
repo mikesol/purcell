@@ -17,10 +17,7 @@ def E(_13) :
       with_labels().\
       subquery('duration_logless_notes')
 
-  Duration_logless_notes = _13.map(duration_logless_notes,
-                                   "duration_logless_notes",
-                                   Column('id', Integer, primary_key=True),
-                                   _13.Duration)
+  Duration_logless_notes = _13.reflect(duration_logless_notes, _13.Duration)
 
   duration_logless_ands =\
     [(and_(Duration_logless_notes.duration__val >= Fraction(2,1)**(x-2),
