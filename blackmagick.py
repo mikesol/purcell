@@ -1,5 +1,5 @@
-from sqlalchemy import Table, Integer, Float, String, Column, func, alias, select, insert, update, union_all
-from sqlalchemy.orm import mapper
+from sqlalchemy import MetaData, Table, Integer, Float, String, Column, func, alias, select, insert, update, union_all
+from sqlalchemy.orm import mapper, aliased
 from sqlalchemy.orm import composite, column_property, relationship
 from abc import ABCMeta, abstractmethod
 from fractions import Fraction
@@ -7,14 +7,10 @@ from sqlalchemy.orm.properties import CompositeProperty
 from sqlalchemy.orm import sessionmaker
 from functools import reduce
 from types import MethodType
-import time
 
 import sys
 import string
 _ALIASES = 100
-
-def _get_with_fallback(d,k,v) :
-  return v if not d.has_key(k) else d[k]
 
 def aliasedclass(fn) :
   def new_fn(*args, **kwargs) :
@@ -289,16 +285,17 @@ class BlackMagick(object) :
     kls_dict = {'id' : c_id, 'source' : c_sr}
     # ugh, props interface kludgy but needed for the init function...
     kls_dict['props'] = ['id','source']
-    kls = type("POINTER", (_PropertyHolder,), kls_dict)
+    kls = type("Pointer", (_PropertyHolder,), kls_dict)
     kls.__table__ = table
     mapper(kls, table)
+    self.Pointer = kls
     return kls
   def make_counter(self) :
     stmts = [select([func.count(prop[1]).label('sum_of_property')]) for prop in self._properties]
     united = union_all(*stmts)
     return select([func.sum(united.c['sum_of_property'])])
-  @staticmethod
-  def make_pointer_assigner(to_assign, pointer) :
+  def make_pointer_assigner(self, to_assign) :
+    pointer = self.Pointer
     u1 = update(to_assign.__table__).values(pointer =  select([func.count(pointer.id)]))
     u2 = update(to_assign.__table__).values(pointer = to_assign.__table__.c.pointer + to_assign.__table__.c.id)
     u3 = insert(pointer.__table__).from_select(['id','source'], select([to_assign.__table__.c.pointer, "'{0}'".format(to_assign.__class__.__name__)]))
@@ -328,6 +325,7 @@ class BlackMagick(object) :
     if pattern not in self._patterns.values() :
       self._add_pattern(pattern)
     self._patterns[table] = pattern
+    setattr(self, string.capitalize(name), kls)
     return kls
   def _add_pattern(self, pattern) :
     for method in pattern.ops :
@@ -379,10 +377,12 @@ class BlackMagick(object) :
     # ugh, props interface kludgy but needed for the init function...
     kls_dict['props'] = column_names[:]
     kls = type(name, (_PropertyHolder,), kls_dict)
-    table = table_or_metadata
-    if isinstance(table, MetaData) :
-      table = Table(string.lower(name), metadata, *columns)
+    table = None
+    if isinstance(table_or_metadata, MetaData) :
+      table = Table(string.lower(name), table_or_metadata, *columns)
       kls.__table__ = table
+    else :
+      table = table_or_metadata
     mapper(kls, table, properties=properties, primary_key=table.c.values()[0])
     #mapper(kls, table, primary_key=table.c.values()[0])
     return kls
@@ -418,198 +418,3 @@ class BlackMagick(object) :
     return self.join(query, base, to_join, True)
   def last_outerjoin(self, query, base, to_join) :
     return self.join(query, base, to_join[:-1]).outerjoin(to_join[-1], to_join[-1].id == base.id)
-    
-
-if __name__ == "__main__" :
-  from sqlalchemy import MetaData, create_engine, asc, desc, insert, update, select, and_, delete, case
-  from sqlalchemy.orm import aliased
-  from sqlalchemy.schema import CreateTable
-
-  #&&&&&&&&&&&&&&&#
-  engine = create_engine('sqlite:///:memory:', echo=False)
-  _13 = BlackMagick()
-  metadata = MetaData()
-  #&&&&&&&&&&&&&&&#
-
-  SQL = {}
-
-  #&&&&&&&&&&&&&&&#
-  POINTER = _13.make_pointer_table(metadata)
-  #&&&&&&&&&&&&&&&#
-  Score = _13.make_property('score', IntegerPattern, metadata)
-  Staff = _13.make_property('staff', IntegerPattern, metadata)
-  Duration = _13.make_property('duration', FractionPattern, metadata)
-  Onset = _13.make_property('onset', FractionPattern, metadata)
-  End = _13.make_property('end', FractionPattern, metadata)
-  Name = _13.make_property('name', StringPattern, metadata)
-  Glyph_index = _13.make_property('glyph_index', IntegerPattern, metadata)
-  Duration_log = _13.make_property('duration_log', IntegerPattern, metadata)
-  Clef_type = _13.make_property('clef_type', StringPattern, metadata)
-
-  SQL['properties'] = [POINTER.__table__]+[prop[1] for prop in _13._properties]
-  SQL['counter'] = _13.make_counter()
-
-  #&&&&&&&&&&&&&&&#
-
-  #&&&&&&&&&&&&&&&#
-  Session = sessionmaker()
-  conn = engine.connect()
-  session = Session(bind=conn)
-  #&&&&&&&&&&&&&&&#
-
-  SQL['engravers'] = []
-  ####################################
-  # assign first clef to all staves
-  first_events_on_staffs =\
-    _13.join(session.query(Score._a[0].val, Staff._a[0].val, Onset._a[0].val, Onset._a[0].min.label('onset_min')),
-             Score._a[0], [Staff._a[0], Onset._a[0]]).\
-      group_by(Score._a[0].val, Staff._a[0].val).\
-      order_by('onset_min').\
-      with_labels().\
-      subquery(name="first_events_on_staffs")
-
-  first_clefs_on_staffs =\
-    _13.join(session.query(Score._a[1].val, Staff._a[1].val, Onset._a[1].val, Onset._a[1].min.label('onset_min'), Name._a[1]),
-             Score._a[1], [Staff._a[1], Onset._a[1], Name._a[1]]).\
-      filter(Name._a[1].val == "clef").\
-      group_by(Score._a[1].val, Staff._a[1].val).\
-      order_by('onset_min').\
-      with_labels().\
-      subquery(name="first_celfs_on_staffs")
-
-  clef_instr = [Score, Staff, Onset, Column('onset_min', Float)]
-
-  First_events_on_staffs = _13.map(first_events_on_staffs, "First_events_on_staffs", *clef_instr)
-  First_clefs_on_staffs = _13.map(first_clefs_on_staffs, "First_clefs_on_staffs", *(clef_instr+[Name]))
-  
-  joined_firsts_to_clefs = session.query(First_events_on_staffs.score__val,
-                             First_events_on_staffs.staff__val,
-                             First_events_on_staffs.onset__val,
-                             "'clef'").outerjoin(
-    First_clefs_on_staffs,
-      and_(First_events_on_staffs.score__val == First_clefs_on_staffs.score__val,
-           First_events_on_staffs.staff__val == First_clefs_on_staffs.staff__val,
-           First_events_on_staffs.onset__val == First_clefs_on_staffs.onset__val)).\
-    filter(First_clefs_on_staffs.name__val == None).subquery(name="joined_firsts_to_clefs")
-
-  First_clef_engraver = _13.map(metadata, "First_clef_engraver",
-     Column('id', Integer, primary_key=True),
-     Score, Staff, Onset, Name, Column('pointer', Integer))
-
-  clef_insert = _13.t(First_clef_engraver).insert().from_select(
-       _13.names(Score, Staff, Onset, Name),
-       joined_firsts_to_clefs)
-
-  SQL['engravers'].append({
-    "tables" : [_13.t(First_clef_engraver)],
-    "inserter" : [clef_insert],
-    "pointer" : _13.make_pointer_assigner(First_clef_engraver, POINTER),
-    "updater" : _13.make_updater(First_clef_engraver)+[delete(_13.t(First_clef_engraver))]
-  })
-  ####################################
-  # assign end to all onsets from durations
-
-  endless_onsets = _13.outerjoin(session.query(Onset.id, Onset.val), Onset, [End]).\
-      filter(End.val == None).cte('endless_onsets')
-
-  onset_duration = _13.add(endless_onsets, Duration, hint=Duration)
-
-  SQL['engravers'].append({
-    "inserter" : [_13.insert(End, onset_duration)],
-  })
-
-  ####################################
-  # assign clef type
-
-  typeless_clefs = _13.outerjoin(session.query(Name.id, Name.val), Name, [Clef_type]).\
-      filter(Name.val == "clef").filter(Clef_type.val == None).cte('typeless_clefs')
-
-  SQL['engravers'].append({
-    "inserter" : [_13.insert(Clef_type,
-    select([typeless_clefs.c.id, "'treble'"]))]
-  })
-
-  ####################################
-  # assign duration_log to notes
-
-  duration_logless_notes = _13.last_outerjoin(session.query(Name.id, Duration.val), Name, [Duration, Duration_log]).\
-      filter(Name.val == "note").filter(Duration_log.val == None).with_labels().subquery('duration_logless_notes')
-
-  Duration_logless_notes = _13.map(duration_logless_notes, "duration_logless_notes", Column('id', Integer, primary_key=True), Duration)
-
-  duration_logless_ands =\
-    [(and_(Duration_logless_notes.duration__val >= Fraction(2,1)**(x-2),
-      Duration_logless_notes.duration__val < Fraction(2,1)**(x-1)), x)
-    for x in range(-7,7)]
-
-  SQL['engravers'].append({
-    "inserter" : [_13.insert(Duration_log,
-    select([duration_logless_notes.c.name_id,
-            case(duration_logless_ands,
-                 else_ = 147)]))]
-  })
-
-  ####################################
-  # assign glyph_index
-
-  glyph_indexless_notes = _13.last_outerjoin(session.query(Name.id, Duration_log.val), Name, [Duration_log, Glyph_index]).\
-      filter(Name.val == "note").filter(Glyph_index.val == None).with_labels().subquery('glyph_indexless_notes')
-
-  Glyph_indexless_notes = _13.map(glyph_indexless_notes, "glyph_indexless_notes", Column('id', Integer, primary_key=True), Duration_log)
-
-  glyph_indexless_ands =\
-    [(Glyph_indexless_notes.duration_log__val == 1, 149),
-     (Glyph_indexless_notes.duration_log__val == 2, 148)]
-
-  SQL['engravers'].append({
-    "inserter" : [_13.insert(Glyph_index,
-    select([glyph_indexless_notes.c.name_id,
-            case(glyph_indexless_ands,
-                 else_ = 147)]))]
-  })
-
-  #------------------%%%%%%%%%%%%%%%%%
-
-  ####################################
-  # Logic
-  # first, create tables
-  for PROPERTY in SQL['properties'] :
-    engine.execute(CreateTable(PROPERTY))
-
-  #&&&&&&&&&&&&&&&#
-  # then, populate them
-  INSERTS = []
-  INSERTS += [Score(id=x+1, val=0) for x in range(8)]
-  INSERTS += [Staff(id=x+1, val=x%2) for x in range(8)]
-  INSERTS += [Duration(id=x+1, num=1, den=4) for x in range(8)]
-  INSERTS += [Onset(id=x+1, num=x/2, den=4) for x in range(8)]
-  INSERTS += [Name(id=x+1, val="note") for x in range(8)]
-  INSERTS += [POINTER(id=x+1, source=None) for x in range(8)]
-  for x in INSERTS :
-    session.add(x)
-  session.commit()
-  #&&&&&&&&&&&&&&&#
-  
-  #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
-  # then, create engravers
-  for ENGRAVER in SQL['engravers'] :
-    for TABLE in _get_with_fallback(ENGRAVER, 'tables', []) :
-      engine.execute(CreateTable(TABLE))
-
-  #@^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^@#
-  # then, run engravers until there are no more changes
-  LAST = -1
-  CUR = conn.execute(SQL['counter']).fetchall()[0][0]
-  
-  while LAST != CUR :
-    LAST = CUR
-    for ENGRAVER in SQL['engravers'] :
-      for elt in _get_with_fallback(ENGRAVER, 'inserter', []) :
-        conn.execute(elt)
-      for elt in _get_with_fallback(ENGRAVER, 'pointer', []) :
-        conn.execute(elt)
-      for elt in _get_with_fallback(ENGRAVER, 'updater', []) :
-        conn.execute(elt)
-    CUR = conn.execute(SQL['counter']).fetchall()[0][0]
-
-  for row in conn.execute(select([Glyph_index.__table__])).fetchall() : print row
