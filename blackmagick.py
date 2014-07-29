@@ -276,6 +276,18 @@ class _PropertyHolder(_MappedClass) :
     for x in range(len(args)) :
       setattr(self, props[x], args[x])
 
+class JoinCrawler(object) :
+  for elt in main_clause :
+    if isinstance(elt, MappedClass) :
+      join_order.append(BlackMagick.J(elt))
+    elif isinstance(elt, AggregateFunction) :
+      agg_elements = AggregateFunction.getElements()
+      for sub_elt in agg_elements :
+        if isinstance(elt, MappedClass) :
+          join_order.append(BlackMagick.J(elt))
+        elif isinstance(elt, BlackMagick.J) :
+          join_order.append(elt)
+
 class BlackMagick(object) :
   def __init__(self) :
     self._properties = []
@@ -358,6 +370,19 @@ class BlackMagick(object) :
         setattr(self, method,
           MethodType(closure(), self, type(self)))
       getattr(self, '_'+method+'s')[pattern] = getattr(pattern, method)
+  def K(main_clause, use_id = False, join_order = None, join_filter = None,
+        filter = None, group_by = None, name = None) :
+    # first, establish joins
+    if not join_order :
+      join_order = JoinCrawler(main_clause)
+    # get the actual properties being acted on
+    select_stmt = []
+    if use_id :
+      select_stmt.append(Column('id', Integer, primary_key = True))
+    for elt in main_clause :
+      select_stmt.append(elt.get_joinable_columns())
+    
+  # ugh...depricate these...
   def reflect(self, stmt, kls) :
     return self.map(stmt,
                     stmt.name,

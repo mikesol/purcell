@@ -17,60 +17,53 @@ def E(_13) :
   '''
   # 13 max should return a statement with correct labels (onset_num_max, onset_den_max)
   # this should automatically join the the dynamically created table
+  # ugh....group is a problem...
   Last_staff_symbols =\
-    _13.K(_13.join(_13.Score.val, _13.Staff.val, _13.max(Onset), fake=[13.Name]).\
-          filter(_13.Name.val == "staff_symbol").\
-          group_by(_13.Score.val, _13.Staff.val).\
-          with_labels().\
-          subquery(name="last_staff_symbols"))
+    _13.K(_13.Score, _13.Staff, _13.max(Onset),
+          filter = _13.Name == "staff_symbol",
+          group_by = (_13.Score.val, _13.Staff.val),
+          name="last_staff_symbols")
 
   All_staff_symbols =\
-    _13.K(_13.last_outerjoin(_13.Score.id, _13.Score.val,
-                          _13.Staff.val, _13.Name.val,
-                          _13.Onset.val, _13.End.val).\
-      filter(_13.Name.val == "staff_symbol").\
-      group_by(_13.Score.val, _13.Staff.val).\
-      with_labels().\
-      subquery(name="last_staff_symbols")
+    _13.K(_13.Score, _13.Staff, _13.Name,
+          _13.Onset, _13.OJ(_13.End.val),
+      use_id = True,
+      filter = _13.Name == "staff_symbol",
+      name = "all_staff_symbols")
 
   Endless_last_staff_symbols =\
-    _13.K(
-      _13.session.query(
-        All_staff_symbols.score_id,
-        All_staff_symbols.score_val,
-        All_staff_symbols.staff_val,
-        All_staff_symbols.onset_val).\
-      select_from(All_staff_symbols).\
-      join(Last_staff_symbols, and_(
-        All_staff_symbols.score_val == Last_staff_symbols.score_val,
-        All_staff_symbols.staff_val == Last_staff_symbols.staff_val,
-        All_staff_symbols.onset_max == Last_staff_symbols.onset)).\
-      filter(All_staff_symbols.end_val == None).\
-      subquery(name="endless_staff_symbols"))
+    _13.K(All_staff_symbols.score,
+          All_staff_symbols.staff,
+          All_staff_symbols.onset,
+          use_id = True,
+          join_filter = 13.and_(All_staff_symbols.score ==\
+                                  Last_staff_symbols.score,
+                                All_staff_symbols.staff ==\
+                                  Last_staff_symbols.staff,
+                                All_staff_symbols.onset ==\
+                                  Last_staff_symbols.onset),
+          filter = All_staff_symbols.end == None,
+          name="endless_last_staff_symbols")
 
   All_staff_symbol_end_anchors =
-    _13.K(_13.join(_13.Score.val,
-                   _13.Staff.val,
-                   _13.max(End),
-                   fake=[_13.Name]).\
-      filter(or_(_13.Name.val == "note",
-        _13.Name.val == "rest",
-        _13.Name.val == "space")).\
-      group_by(_13.Score.val, _13.Staff.val).\
-      with_labels().\
-      subquery(name="all_staff_symbol_end_anchors")
+    _13.K(_13.Score,
+          _13.Staff,
+          _13.max(End),
+          filter = or_(_13.Name == "note",
+                        _13.Name == "rest",
+                        _13.Name == "space"),
+          group_by = (_13.Score, _13.Staff),
+          name = "all_staff_symbol_end_anchors")
 
-  new_ends =_13.query(Endless_last_staff_symbols.score_id, 
-                      _13.case([(All_staff_symbol_ends.end_val == None,
-                       Endless_last_staff_symbols.onset_val)],
-                     else_ = All_staff_symbol_ends.end_val)).\
-      select_from(Endless_last_staff_symbols).\
-      outerjoin(All_staff_symbol_end_anchors,
-        and_(All_staff_symbol_end_anchors.score_val ==\
-               Endless_last_staff_symbols.score_val,
-             All_staff_symbol_ends_anchors.staff_val ==\
-               Endless_last_staff_symbols.staff_val
-        ))
+  New_ends =\
+    _13.K(_13.case([(All_staff_symbol_ends.end == None,
+                       Endless_last_staff_symbols.onset)],
+                   else_ = All_staff_symbol_ends.end)),
+          use_id = True,
+          join_filter = OJ(and_(All_staff_symbol_end_anchors.score ==\
+                                  Endless_last_staff_symbols.score,
+                                All_staff_symbol_ends_anchors.staff ==\
+                                  Endless_last_staff_symbols.staff))
   '''
 
   last_staff_symbols =\
