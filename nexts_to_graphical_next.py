@@ -5,20 +5,25 @@ import sys
 
 class _Delete(DeleteStmt) :
   def __init__(self, next_table, graphical_next) :
-    def where_clause_fn(**kwargs) :
-      strain = bound_range(kwargs['id'], next_table)
+    def where_clause_fn(id) :
+      strain = bound_range(id, next_table)
       stmt = select([strain]).where(strain.c.elt == graphical_next.c.id)
       stmt = exists(stmt)
       return stmt
-    DeleteStmt.__init__(self, graphical_next, where_clause_fn, 'id')
+    DeleteStmt.__init__(self, graphical_next, where_clause_fn)
 
-# ugh, need this to = val, not id
+# UGGGGGGGHHH,
+# need this to = val, not id
 # need to find a way to pass that in
+# for now, just delete everything
+# ugh ugh ugh ugh ugh ugh ugh ugh ugh ugh
+# P.S.
+# ugh
 class _Delete_HTA(DeleteStmt) :
   def __init__(self, graphical_next) :
-    def where_clause_fn(**kwargs) :
-      return graphical_next.c.id == kwargs['val']
-    DeleteStmt.__init__(self, graphical_next, where_clause_fn, 'val')
+    def where_clause_fn(id) :
+      return graphical_next.c.id != 3.1416
+    DeleteStmt.__init__(self, graphical_next, where_clause_fn)
 
 class _Insert(InsertStmt) :
   def __init__(self, horstemps_anchor, horstemps_next, time_next, graphical_next) :
@@ -34,7 +39,10 @@ class _Insert(InsertStmt) :
     out_of_horstemps = select([
       horstemps_next.c.id.label('id'),
       horstemps_anchor.c.val.label('val')
-    ]).where(horstemps_next.c.val == None).cte(name="out_of_horstemps")
+    ]).select_from(
+       horstemps_next.join(horstemps_anchor, onclause = horstemps_next.c.id == horstemps_anchor.c.id)
+      ).\
+        where(horstemps_next.c.val == None).cte(name="out_of_horstemps")
 
     self.register_stmt(out_of_horstemps)
 
@@ -71,11 +79,7 @@ class _Insert(InsertStmt) :
 
     self.register_stmt(merge_2)
     
-    huge_kludge = select([graphical_next.c.id.label('id'), graphical_next.c.val.label('val')]).cte('huge_kludge')
-
-    self.register_stmt(huge_kludge)
-
-    giant_kludge = realize(merge_2, huge_kludge, 'val')
+    giant_kludge = realize(merge_2, graphical_next, 'val')
 
     self.register_stmt(giant_kludge)
 
@@ -104,8 +108,8 @@ if __name__ == "__main__" :
   from sqlalchemy import event, DDL
   
   ECHO = False
-  MANUAL_DDL = True
-  #MANUAL_DDL = False
+  #MANUAL_DDL = True
+  MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
   engine = create_engine('sqlite:///memory', echo=ECHO)
   conn = engine.connect()
@@ -141,10 +145,11 @@ if __name__ == "__main__" :
     stmts.append((Horstemps_anchor, {'id': OFFSET + x, 'val': ANCHORS[CT % 4]}))
     if x > (16 - 5) :
       stmts.append((Horstemps_next, {'id': OFFSET + x + 4, 'val':None}))
+      stmts.append((Horstemps_anchor, {'id': OFFSET + x + 4, 'val':ANCHORS[CT % 4]}))
     CT += 1
 
-  for stmt in stmts :
-    print stmt[0].name, stmt[1]
+  #for stmt in stmts :
+  #  print stmt[0].name, stmt[1]
 
   #sys.exit(1)
 
@@ -154,8 +159,18 @@ if __name__ == "__main__" :
   trans.commit()
 
   NOW = time.time()
-  for row in conn.execute(select([Graphical_next])).fetchall() :
-    print row
+  goods = conn.execute(select([Graphical_next])).fetchall()
+  for START in [0,1] :
+    V = START
+    while True :
+      l = filter(lambda x : x[0] == V, goods)
+      if len(l) > 1 : raise ValueError
+      if len(l) == 0 : break
+      print l[0]
+      V = l[0][1]
+    print "*****"
+  #for row in conn.execute(select([Graphical_next])).fetchall() :
+  #  print row
   
   #manager.update(conn, Duration, {'num':100, 'den':1}, Duration.c.id == 4, MANUAL_DDL)
   #conn.execute(Duration.update().values(num=100, den=1).where(Duration.c.id == 4))
