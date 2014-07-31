@@ -22,7 +22,7 @@ Time_next = make_table('time_next', Integer, unique=True)
 Onset_anchor = make_table('onset_anchor', Integer)
 
 # accidental attached to a note
-Accidental = make_table('accidental', Fraction)
+Accidental = make_table('accidental', Integer)
 # pitch attached to a note
 Pitch = make_table('pitch', Integer)
 # octave attached to a note
@@ -49,6 +49,10 @@ Onset_referent = make_table('onset_referent', Integer)
 # the global onset in the piece
 Global_onset = make_table('global_onset', Fraction)
 
+# layout
+Dot_padding = make_table('dot_padding', Float)
+Rhythmic_event_to_dot_padding = make_table('rhythmic_event_to_dot_padding', Float)
+Rhythmic_event_to_accidental_padding = make_table('rhythmic_event_to_accidental_padding', Float)
 
 Left_bound = make_table('left_bound', Integer)
 Right_bound = make_table('right_bound', Integer)
@@ -61,6 +65,10 @@ Font_name = make_table('font_name', String)
 Font_size = make_table('font_size', Float)
 Glyph_idx = make_table('glyph_idx', Integer)
 
+Rhythmic_event_width = make_table('rhythmic_event_width', Float)
+Dot_width = make_table('dot_width', Float)
+Accidental_width = make_table('accidental_width', Float)
+Right_width = make_table('right_width', Float)
 Width = make_table('width', Float)
 
 Graphical_next = make_table('graphical_next', Integer)
