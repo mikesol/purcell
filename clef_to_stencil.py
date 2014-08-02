@@ -20,6 +20,8 @@ class _Insert(InsertStmt) :
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
       glyph_idx.c.val.label('glyph_idx'),
+      literal(0).label('x'),
+      literal(0).label('y'),
     ]).where(and_(name.c.val == 'clef',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,

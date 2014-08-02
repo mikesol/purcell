@@ -24,6 +24,7 @@ _metadata = MetaData()
 class Fraction : pass
 class Line : pass
 class Glyph : pass
+class Str : pass
 
 def make_table(name, tp, unique = False) :
   if tp == Fraction :
@@ -47,7 +48,18 @@ def make_table(name, tp, unique = False) :
                      Column('sub_id', Integer, primary_key = True),
                      Column('font_name', String),
                      Column('font_size', Float),
-                     Column('glyph_idx', Integer))
+                     Column('glyph_idx', Integer),
+                     Column('x', Float),
+                     Column('y', Float))
+  if tp == Str :
+    return Table(name, _metadata,
+                     Column('id', Integer, primary_key = True),
+                     Column('sub_id', Integer, primary_key = True),
+                     Column('font_name', String),
+                     Column('font_size', Float),
+                     Column('str', String),
+                     Column('x', Float),
+                     Column('y', Float))
   return Table(name, _metadata,
                      Column('id', Integer, primary_key = True),
                      Column('val', tp, unique = unique))
@@ -336,8 +348,9 @@ class DDL_manager(object) :
           ids.append(row[0])
       self.generic_ddl(True, conn, stmt.table, ids, action)
       print "/// NOW DOING MAIN", action, "ON", stmt.table.name, "WITH IDS", ids
-      #if hasattr(stmt, 'parameters') :
-      #  print "////// with parameters", stmt.parameters
+      if hasattr(stmt, 'parameters') :
+        if stmt.select == None :
+          print "////// with explicit parameters", stmt.parameters
       conn.execute(stmt)
       if action == 'UPDATE' :
         ids = []

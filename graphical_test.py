@@ -3,6 +3,7 @@ import rhythmic_events_to_durations
 import clef_to_width
 import key_signature_to_width
 import time_signature_to_width
+import time_signature_to_height
 import accidental_to_width
 import dots_to_width
 import rhythmic_events_to_right_width
@@ -11,6 +12,10 @@ import nexts_to_graphical_next
 import graphical_next_to_space_prev
 import space_prev_to_x_position
 import duration_log_to_width
+
+import staff_symbol_to_stencil
+import clef_to_stencil
+import time_signature_to_stencil
 
 import emmentaler_tools
 
@@ -71,6 +76,15 @@ manager.ddls += time_signature_to_width.generate_ddl(name = Name,
                                      width = Width)
 
 ###############################
+manager.ddls += time_signature_to_height.generate_ddl(name = Name,
+                                     font_name = Font_name,
+                                     font_size = Font_size,
+                                     time_signature = Time_signature,
+                                     string_box = String_box,
+                                     time_signature_inter_number_padding = Time_signature_inter_number_padding,
+                                     height = Height)
+
+###############################
 manager.ddls += accidental_to_width.generate_ddl(font_name = Font_name,
                                      font_size = Font_size,
                                      accidental = Accidental,
@@ -127,6 +141,32 @@ manager.ddls += graphical_next_to_space_prev.generate_ddl(graphical_next = Graph
 manager.ddls += space_prev_to_x_position.generate_ddl(graphical_next = Graphical_next,
                                      space_prev = Space_prev,
                                      x_position = X_position)
+
+###############################
+manager.ddls += clef_to_stencil.generate_ddl(name = Name,
+                                     font_name = Font_name,
+                                     font_size = Font_size,
+                                     glyph_idx = Glyph_idx,
+                                     glyph_stencil = Glyph_stencil)
+
+###############################
+manager.ddls += staff_symbol_to_stencil.generate_ddl(name = Name,
+                                     line_thickness = Line_thickness,
+                                     n_lines = N_lines,
+                                     staff_space = Staff_space,
+                                     x_position = X_position,
+                                     line_stencil = Line_stencil)
+###############################
+# xxxx
+manager.ddls += time_signature_to_stencil.generate_ddl(name = Name,
+                                     font_name = Font_name,
+                                     font_size = Font_size,
+                                     time_signature = Time_signature,
+                                     string_box = String_box,
+                                     width = Width,
+                                     height = Height,
+                                     stencil = String_stencil)
+
 if not MANUAL_DDL :
   manager.register_ddls(conn, LOG = True)
 
@@ -144,6 +184,7 @@ stmts = []
 stmts.append((Dot_padding, {'id': -1, 'val':0.1}))
 stmts.append((Rhythmic_event_to_dot_padding, {'id':-1, 'val': 0.1}))
 stmts.append((Rhythmic_event_to_accidental_padding, {'id':-1, 'val': 0.1}))
+stmts.append((Time_signature_inter_number_padding, {'id':-1, 'val': 0.0}))
 
 # link up notes in time
 TN = [3,4,5,7,8,None]
@@ -218,6 +259,12 @@ for x in range(len(HT_1) - 1) :
   stmts.append((Horstemps_next, {'id':HT_1[x], 'val':HT_1[x+1]}))
   stmts.append((Horstemps_anchor, {'id':HT_1[x], 'val':7}))
 
+# make a staff symbol
+stmts.append((Name, {'id':9,'val':'staff_symbol'}))
+stmts.append((Line_thickness, {'id':9, 'val':0.1}))
+stmts.append((N_lines, {'id':9,'val':5}))
+stmts.append((Staff_space, {'id':9, 'val':0.5}))
+
 # run!
 
 trans = conn.begin()
@@ -229,3 +276,19 @@ trans.commit()
 NOW = time.time()
 for row in conn.execute(select([X_position])).fetchall() :
   print row
+
+print "*"*40
+
+for row in conn.execute(select([Line_stencil])).fetchall() :
+  print row
+
+print ">"*40
+
+for row in conn.execute(select([Glyph_stencil])).fetchall() :
+  print row
+
+print "!"*40
+
+for row in conn.execute(select([String_stencil])).fetchall() :
+  print row
+

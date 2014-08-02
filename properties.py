@@ -1,5 +1,5 @@
 from sqlalchemy import Integer, Float, String
-from plain import make_table, Fraction, Line, Glyph
+from plain import make_table, Fraction, Line, Glyph, Str
 
 Score = make_table('score', Integer)
 Staff = make_table('staff', Integer)
@@ -53,6 +53,7 @@ Global_onset = make_table('global_onset', Fraction)
 Dot_padding = make_table('dot_padding', Float)
 Rhythmic_event_to_dot_padding = make_table('rhythmic_event_to_dot_padding', Float)
 Rhythmic_event_to_accidental_padding = make_table('rhythmic_event_to_accidental_padding', Float)
+Time_signature_inter_number_padding = make_table('time_signature_inter_number_padding', Float)
 
 Left_bound = make_table('left_bound', Integer)
 Right_bound = make_table('right_bound', Integer)
@@ -71,6 +72,7 @@ Accidental_width = make_table('accidental_width', Float)
 Left_width = make_table('left_width', Float)
 Right_width = make_table('right_width', Float)
 Width = make_table('width', Float)
+Height = make_table('height', Float)
 
 Space_prev = make_table('space_prev', Float)
 X_position = make_table('x_position', Float)
@@ -85,3 +87,4 @@ N_lines = make_table('n_lines', Integer)
 Staff_space = make_table('staff_space', Float)
 
 Glyph_stencil = make_table('glyph_stencil', Glyph)
+String_stencil = make_table('string_stencil', Str)
