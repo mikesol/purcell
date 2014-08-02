@@ -11,7 +11,7 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, font_name, font_size, glyph_idx, x_position, glyph_stencil) :
+  def __init__(self, name, font_name, font_size, glyph_idx, glyph_stencil) :
     InsertStmt.__init__(self)
 
     clefs_to_stencils = select([
@@ -20,13 +20,10 @@ class _Insert(InsertStmt) :
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
       glyph_idx.c.val.label('glyph_idx'),
-      x_position.c.val.label('x'),
-      literal(0.0).label('y') # change me
     ]).where(and_(name.c.val == 'clef',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == glyph_idx.c.id,
-                  name.c.id == x_position.c.id
                   )).\
     cte(name='clefs_to_stencils')
 
@@ -34,16 +31,16 @@ class _Insert(InsertStmt) :
 
     self.insert = simple_insert(glyph_stencil, clefs_to_stencils)
 
-def generate_ddl(name, font_name, font_size, glyph_idx, x_position, glyph_stencil) :
+def generate_ddl(name, font_name, font_size, glyph_idx, glyph_stencil) :
   OUT = []
 
-  insert_stmt = _Insert(name, font_name, font_size, glyph_idx, x_position, glyph_stencil)
+  insert_stmt = _Insert(name, font_name, font_size, glyph_idx, glyph_stencil)
 
   del_stmt = _Delete(glyph_stencil)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [name, font_name, font_size, glyph_idx, x_position]]
+     for table in [name, font_name, font_size, glyph_idx]]
 
   return OUT
 
@@ -65,7 +62,6 @@ if __name__ == "__main__" :
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      glyph_idx = Glyph_idx,
-                                     x_position = X_position,
                                      glyph_stencil = Glyph_stencil))
 
   if not MANUAL_DDL :

@@ -47,9 +47,7 @@ def make_table(name, tp, unique = False) :
                      Column('sub_id', Integer, primary_key = True),
                      Column('font_name', String),
                      Column('font_size', Float),
-                     Column('glyph_idx', Integer),
-                     Column('x', Float),
-                     Column('y', Float))
+                     Column('glyph_idx', Integer))
   return Table(name, _metadata,
                      Column('id', Integer, primary_key = True),
                      Column('val', tp, unique = unique))
