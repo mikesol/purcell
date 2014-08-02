@@ -1,8 +1,19 @@
 import tuplet_to_factor
 import rhythmic_events_to_durations
-import rhythmic_events_to_local_onsets
-import anchor_to_referent
-import local_onsets_to_global_onsets
+import clef_to_width
+import key_signature_to_width
+import time_signature_to_width
+import accidental_to_width
+import dots_to_width
+import rhythmic_events_to_right_width
+import rhythmic_events_to_left_width
+import nexts_to_graphical_next
+import graphical_next_to_space_prev
+import space_prev_to_x_position
+import duration_log_to_width
+
+import emmentaler_tools
+
 import time
 
 from plain import *
@@ -35,27 +46,14 @@ manager.ddls += rhythmic_events_to_durations.generate_ddl(duration_log = Duratio
                     dots = Dots,
                     tuplet_factor = Tuplet_factor,
                     duration = Duration)
-'''
-###############################
-manager.ddls += rhythmic_events_to_local_onsets.generate_ddl(time_next = Time_next,
-                    local_onset = Local_onset,
-                    duration_log = Duration_log,
-                    duration = Duration)
-###############################
-manager.ddls += anchor_to_referent.generate_ddl(generic_referent = Onset_referent,
-                             generic_next = Time_next,
-                             generic_anchor = Onset_anchor)
-###############################
-manager.ddls += anchor_to_referent.generate_ddl(generic_referent = Horstemps_referent,
-                             generic_next = Horstemps_next,
-                             generic_anchor = Horstemps_anchor)
-###############################
-manager.ddls += local_onsets_to_global_onsets.generate_ddl(
-                          global_onset = Global_onset,
-                          onset_referent = Onset_referent,
-                          onset_anchor = Onset_anchor,
-                          local_onset = Local_onset)
-'''
+
+manager.ddls += key_signature_to_width.generate_ddl(name = Name,
+                                     font_name = Font_name,
+                                     font_size = Font_size,
+                                     key_signature = Key_signature,
+                                     glyph_box = Glyph_box,
+                                     width = Width)
+
 ###############################
 manager.ddls += clef_to_width.generate_ddl(name = Name,
                                    font_name = Font_name,
@@ -78,6 +76,14 @@ manager.ddls += accidental_to_width.generate_ddl(font_name = Font_name,
                                      accidental = Accidental,
                                      glyph_box = Glyph_box,
                                      accidental_width = Accidental_width)
+
+################################
+manager.ddls += duration_log_to_width.generate_ddl(font_name = Font_name,
+                                     font_size = Font_size,
+                                     duration_log = Duration_log,
+                                     glyph_box = Glyph_box,
+                                     name = Name,
+                                     rhythmic_event_width = Rhythmic_event_width)
 
 ###############################
 manager.ddls += dots_to_width.generate_ddl(font_name = Font_name,
@@ -121,95 +127,105 @@ manager.ddls += graphical_next_to_space_prev.generate_ddl(graphical_next = Graph
 manager.ddls += space_prev_to_x_position.generate_ddl(graphical_next = Graphical_next,
                                      space_prev = Space_prev,
                                      x_position = X_position)
-
 if not MANUAL_DDL :
   manager.register_ddls(conn, LOG = True)
 
 Score.metadata.drop_all(engine)
 Score.metadata.create_all(engine)
 
+emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
+emmentaler_tools.add_to_string_box_table(conn, String_box, '3')
+emmentaler_tools.add_to_string_box_table(conn, String_box, '4')
+
 stmts = []
 
-#BIG = 2**8
-BIG = 2**6
+# DEFAULTS
+# TODO - in separate file?
+stmts.append((Dot_padding, {'id': -1, 'val':0.1}))
+stmts.append((Rhythmic_event_to_dot_padding, {'id':-1, 'val': 0.1}))
+stmts.append((Rhythmic_event_to_accidental_padding, {'id':-1, 'val': 0.1}))
 
-#INSTR = [[0,16,2,3], [4,16,2,3], [7,19,4,5], [21,37,4,7], [37,37,2,3]]
-INSTR = [[0,16,2,3], [37,37,2,3]]
+# link up notes in time
+TN = [3,4,5,7,8,None]
+for x in range(len(TN) - 1) :
+  stmts.append((Time_next, {'id':TN[x], 'val':TN[x+1]}))
 
-for x in range(BIG) :
-  if x < (BIG - 2) :
-    stmts.append((Time_next, {'id':x, 'val':x + 2}))
+# A time signature
+stmts.append((Name, {'id':0,'val':'time_signature'}))
+stmts.append((Font_name, {'id':0,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':0,'val':20}))
+stmts.append((Time_signature, {'id':0,'num':3,'den':4}))
 
-for x in range(BIG) :
-  stmts.append((Duration_log, {'id':x, 'val': (x % 4) - 2}))
-  stmts.append((Dots, {'id':x, 'val':x % 3}))
+# A key signature
+stmts.append((Name, {'id':1,'val':'key_signature'}))
+stmts.append((Font_name, {'id':1,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':1,'val':20}))
+stmts.append((Key_signature, {'id':1,'val':2}))
 
-for x in range(len(INSTR)) :
-  stmts.append((Name, {'id':BIG + x, 'val':"tuplet"}))
-  stmts.append((Left_bound, {'id':BIG + x, 'val':INSTR[x][0]}))
-  stmts.append((Right_bound, {'id':BIG + x, 'val':INSTR[x][1]}))
-  stmts.append((Tuplet_fraction, {'id':BIG + x, 'num':INSTR[x][2], 'den':INSTR[x][3]}))
+# A clef
+stmts.append((Name, {'id':2,'val':'clef'}))
+stmts.append((Font_name, {'id':2,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':2,'val':20}))
+stmts.append((Glyph_idx, {'id':2,'val':116}))
 
-BIGGER = BIG + len(INSTR)
+# some notes and rests
+stmts.append((Name, {'id':3,'val':'note'}))
+stmts.append((Font_name, {'id':3,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':3,'val':20}))
+stmts.append((Duration_log, {'id':3,'val':-2}))
+stmts.append((Dots, {'id':3,'val':1}))
+stmts.append((Accidental, {'id':3,'val':-1}))
 
-HTS = 3
+stmts.append((Name, {'id':4,'val':'rest'}))
+stmts.append((Font_name, {'id':4,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':4,'val':20}))
+stmts.append((Duration_log, {'id':4,'val':-1}))
+stmts.append((Dots, {'id':4,'val':2}))
 
-for x in range(HTS * 2) :
-  stmts.append((Horstemps_next, {'id':x + BIGGER, 'val':x + BIGGER + 2}))
+stmts.append((Name, {'id':5,'val':'note'}))
+stmts.append((Font_name, {'id':5,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':5,'val':20}))
+stmts.append((Duration_log, {'id':5,'val':0}))
 
-for x in range(2) :
-  stmts.append((Horstemps_anchor, {'id':x + BIGGER, 'val':x}))
+# another clef
+stmts.append((Name, {'id':6,'val':'clef'}))
+stmts.append((Font_name, {'id':6,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':6,'val':20}))
+stmts.append((Glyph_idx, {'id':6,'val':116}))
 
-NOW = time.time()
+# some notes and rests
+stmts.append((Name, {'id':7,'val':'note'}))
+stmts.append((Font_name, {'id':7,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':7,'val':20}))
+stmts.append((Duration_log, {'id':7,'val':-3}))
+stmts.append((Dots, {'id':7,'val':2}))
+stmts.append((Accidental, {'id':7,'val':1}))
+
+stmts.append((Name, {'id':8,'val':'rest'}))
+stmts.append((Font_name, {'id':8,'val':'emmentaler-20'}))
+stmts.append((Font_size, {'id':8,'val':20}))
+stmts.append((Duration_log, {'id':8,'val':-1}))
+
+# link up things out of time, including to their anchors
+# link up notes in time
+HT_0 = [0,1,2,None]
+for x in range(len(HT_0) - 1) :
+  stmts.append((Horstemps_next, {'id':HT_0[x], 'val':HT_0[x+1]}))
+  stmts.append((Horstemps_anchor, {'id':HT_0[x], 'val':3}))
+
+HT_1 = [6,None]
+for x in range(len(HT_1) - 1) :
+  stmts.append((Horstemps_next, {'id':HT_1[x], 'val':HT_1[x+1]}))
+  stmts.append((Horstemps_anchor, {'id':HT_1[x], 'val':7}))
+
+# run!
+
 trans = conn.begin()
 for st in stmts :
-  #print st
+  print "~~~~~~~~~~~~~~~~~~~~~~~", st[0].name, st[1]
   manager.insert(conn, st[0].insert().values(**st[1]), MANUAL_DDL)
-  #print time.time() - NOW
 trans.commit()
 
-#for row in conn.execute(select([Onset_referent])) :
-#  print row
-
-for row in conn.execute(select([Global_onset])) :
+NOW = time.time()
+for row in conn.execute(select([X_position])).fetchall() :
   print row
-
-for row in conn.execute(select([Horstemps_referent])) :
-  print row
-
-'''
-print "*"*40
-
-for row in conn.execute(select([Local_onset])) :
-  print row
-
-print "^"*40
-
-for row in conn.execute(select([Duration])) :
-  print row
-
-print ":"*40
-
-time.sleep(1)
-
-conn.execute(Duration_log.update().values(val=-4).where(Duration_log.c.id==0))
-#conn.execute(Duration_log.update().values(val=-4).where(Duration_log.c.id==1))
-#conn.execute(Duration_log.update().values(val=-4).where(Duration_log.c.id==62))
-for row in conn.execute(select([Duration])) :
-  print row
-
-for row in conn.execute(select([Local_onset])) :
-  print row
-
-print "Duration_log"+"@"*40
-
-for row in conn.execute(select([Duration_log])) :
-  print row
-
-print "*"*40
-
-#for row in conn.execute(select([Log_table])) :
-#  print row
-
-print "&"*40
-'''

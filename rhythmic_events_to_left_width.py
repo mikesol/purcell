@@ -8,40 +8,40 @@ import emmentaler_tools
 # need to find a way to work font size into this...
 
 class _Delete(DeleteStmt) :
-  def __init__(self, right_width) :
+  def __init__(self, left_width) :
     def where_clause_fn(id) :
-      return right_width.c.id == id
-    DeleteStmt.__init__(self, right_width, where_clause_fn)
+      return left_width.c.id == id
+    DeleteStmt.__init__(self, left_width, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, right_width) :
+  def __init__(self, glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
     InsertStmt.__init__(self)
 
     rhythmic_event_to_accidental_padding_a = rhythmic_event_to_accidental_padding.alias(name='rhythmic_event_to_accidental_padding_alias')
 
-    rhythmic_event_to_right_widths = select([
+    rhythmic_event_to_left_widths = select([
       rhythmic_event_width.c.id.label('id'),
       (rhythmic_event_width.c.val +\
         case([(accidental_width.c.val == None, 0)], else_ = accidental_width.c.val) +\
         case([(accidental_width.c.val == None, 0), (rhythmic_event_to_accidental_padding.c.val == None, rhythmic_event_to_accidental_padding_a.c.val)], else_ = rhythmic_event_to_accidental_padding.c.val)).label('val')
     ]).select_from(rhythmic_event_width.outerjoin(accidental_width, onclause = rhythmic_event_width.c.id == accidental_width.c.id)).\
        where(rhythmic_event_to_accidental_padding_a.c.id == -1).\
-    cte(name='rhythmic_event_to_right_widths')
+    cte(name='rhythmic_event_to_left_widths')
 
-    self.register_stmt(rhythmic_event_to_right_widths)
+    self.register_stmt(rhythmic_event_to_left_widths)
 
     #uggghhhh....
-    real_rhythmic_event_to_right_widths = realize(rhythmic_event_to_right_widths, right_width, 'val')
+    real_rhythmic_event_to_left_widths = realize(rhythmic_event_to_left_widths, left_width, 'val')
     
-    self.register_stmt(real_rhythmic_event_to_right_widths)
-    self.insert = simple_insert(right_width, real_rhythmic_event_to_right_widths)
+    self.register_stmt(real_rhythmic_event_to_left_widths)
+    self.insert = simple_insert(left_width, real_rhythmic_event_to_left_widths)
 
-def generate_ddl(glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, right_width) :
+def generate_ddl(glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
   OUT = []
 
-  insert_stmt = _Insert(glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, right_width)
+  insert_stmt = _Insert(glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, left_width)
 
-  del_stmt = _Delete(right_width)
+  del_stmt = _Delete(left_width)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
@@ -67,7 +67,7 @@ if __name__ == "__main__" :
                                      rhythmic_event_width = Rhythmic_event_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
-                                     right_width = Right_width))
+                                     left_width = Left_width))
 
   if not MANUAL_DDL :
     manager.register_ddls(conn, LOG = True)
@@ -96,7 +96,7 @@ if __name__ == "__main__" :
   trans.commit()
 
   NOW = time.time()
-  for row in conn.execute(select([Right_width])).fetchall() :
+  for row in conn.execute(select([Left_width])).fetchall() :
     print row
   
   #manager.update(conn, Duration, {'num':100, 'den':1}, Duration.c.id == 4, MANUAL_DDL)

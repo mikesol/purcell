@@ -1,14 +1,20 @@
 from sqlalchemy import Table, MetaData, Column, Integer, Float, String
 from sqlalchemy import select, cast, exists, distinct, case
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy import func, event, text, DDL
 from sqlalchemy.sql.selectable import Exists
 from sqlalchemy.exc import ResourceClosedError
 from sqlalchemy.sql.elements import BinaryExpression
 import string
+import random
 import math
 
 _GLOBAL_VERBOSE = False
+
+# i <3 you, randString!
+def _randString(length=16, chars=string.letters):
+  first = random.choice(string.letters[26:])
+  return first+''.join([random.choice(chars) for i in range(length-1)])
 
 def almost_equal(x,y) :
   return abs(x-y) < 10E-16
@@ -16,6 +22,8 @@ def almost_equal(x,y) :
 _metadata = MetaData()
 
 class Fraction : pass
+class Line : pass
+class Glyph : pass
 
 def make_table(name, tp, unique = False) :
   if tp == Fraction :
@@ -24,6 +32,24 @@ def make_table(name, tp, unique = False) :
                      Column('id', Integer, primary_key = True),
                      Column('num', Integer),
                      Column('den', Integer))
+  if tp == Line :
+    return Table(name, _metadata,
+                     Column('id', Integer, primary_key = True),
+                     Column('sub_id', Integer, primary_key = True),
+                     Column('x0', Float),
+                     Column('y0', Float),
+                     Column('x1', Float),
+                     Column('y1', Float),
+                     Column('thickness', Float))
+  if tp == Glyph :
+    return Table(name, _metadata,
+                     Column('id', Integer, primary_key = True),
+                     Column('sub_id', Integer, primary_key = True),
+                     Column('font_name', String),
+                     Column('font_size', Float),
+                     Column('glyph_idx', Integer),
+                     Column('x', Float),
+                     Column('y', Float))
   return Table(name, _metadata,
                      Column('id', Integer, primary_key = True),
                      Column('val', tp, unique = unique))
@@ -194,7 +220,7 @@ class InsertStmt(object) :
         print select([stmt])
         print "&&&&&&&&&&&&&&&&&&&&&&&"
       try :
-        for row in conn.execute(select([stmt])) :
+        for row in conn.execute(select([stmt])).fetchall() :
           print "  ", row
       except ResourceClosedError :
         print "no rows were returned from this statement"
@@ -220,16 +246,21 @@ class DeleteStmt(object) :
       where_clause = where_clause.compile(compile_kwargs={"literal_binds": True})
       where_clause = str(where_clause).split('\n')
       for x in reversed(range(len(where_clause))) :
+        # this is bad because it will inadvertently screw with other tables as well
+        # probably need to bite the bullet and make better sqlite bindings
         if 'FROM' in where_clause[x] :
           where_clause[x] = where_clause[x].replace(", "+self.table.name, "")
           where_clause[x] = where_clause[x].replace(","+self.table.name, "")
           where_clause[x] = where_clause[x].replace(self.table.name, "")
           break
       where_clause = '\n'.join(where_clause)
-    else :
+    elif where_clause :
       # hideous!!!
       where_clause = str(where_clause.compile(compile_kwargs={"literal_binds": True}))
-    return self.table.delete().where(text(str(where_clause)))
+    if where_clause :
+      return self.table.delete().where(text(str(where_clause)))
+    else :
+      return self.table.delete()
   def debug_before(self, id, conn, verbose = _GLOBAL_VERBOSE) :
     print "$$$", "BEFORE DELETE"
     for row in conn.execute(select([self.table])) :
@@ -265,6 +296,8 @@ class DDL_unit(object) :
       tb_nm += '_del_'+'_'.join([stmt.table.name for stmt in self.deletes])
     if (self.inserts) :
       tb_nm += '_ins_'+'_'.join([stmt.insert.table.name for stmt in self.inserts])
+    # arggg - we need to add a random tag to the trigger names in case multiple ddls operate on same tables
+    tb_nm += '_'+_randString(4)
     log_st = "INSERT INTO log_table (mom, msg) VALUES (strftime('%%f','now'),'{0}');".format(tb_nm) if LOG else ''
     instr = trigger.format(self.table.name, self.action, tb_nm, log_st, del_st, inst_st, 'BEFORE' if self.before else 'AFTER')
     instr = instr.replace("'@ID@'", '{0}.id'.format('old' if self.action == 'DELETE' else 'new'))
@@ -290,15 +323,23 @@ class DDL_manager(object) :
     if manual_ddl :
       ids = []
       if action == 'INSERT' :
-        ids = [stmt.parameters['id']]
+        #print "==== dictdebug", stmt.__dict__
+        if stmt.select != None :
+          try :
+            for row in conn.execute(stmt.select).fetchall() :
+              ids.append(row[0])
+          except ResourceClosedError :
+            print "insert from select does not return any rows"
+        else :
+          ids = [stmt.parameters['id']]
       else :
         # uggghh
         for row in conn.execute(select([stmt.table]).where(stmt._whereclause)).fetchall() :
           ids.append(row[0])
       self.generic_ddl(True, conn, stmt.table, ids, action)
-      print "/// NOW DOING MAIN", action, "ON", stmt.table.name
-      if hasattr(stmt, 'parameters') :
-        print "////// with parameters", stmt.parameters
+      print "/// NOW DOING MAIN", action, "ON", stmt.table.name, "WITH IDS", ids
+      #if hasattr(stmt, 'parameters') :
+      #  print "////// with parameters", stmt.parameters
       conn.execute(stmt)
       if action == 'UPDATE' :
         ids = []
@@ -308,6 +349,7 @@ class DDL_manager(object) :
     else :
       conn.execute(stmt)
   def generic_ddl(self, before, conn, table, ids, action) :
+    print "??????????? IDS", ids
     ddls = filter(lambda x : x.before == before, self.ddls)
     for ddl in ddls :
       if (ddl.table == table) and (ddl.action == action) :
@@ -329,8 +371,14 @@ def realize(to_realize, comp_t, prop) :
   #out = select([v.label(k) for k,v in to_realize.c.items()]).\
   # select_from(to_realize.outerjoin(comp_t, onclause = to_realize.c.id == comp_t.c.id)).\
   # where(comp_t.c[prop] == None).cte(name='realized_'+to_realize.name)
-  out = select([v.label(k) for k,v in to_realize.c.items()]).\
-          except_(select([v.label(k) for k,v in comp_t.c.items()])).\
+
+  #out = select([v.label(k) for k,v in to_realize.c.items()]).\
+  #        except_(select([v.label(k) for k,v in comp_t.c.items()])).\
+  #     cte(name='realized_'+to_realize.name)
+
+  keys = comp_t.c.keys()
+  out = select([to_realize.c[k].label(k) for k in keys]).\
+          except_(select([comp_t.c[k] for k in keys])).\
        cte(name='realized_'+to_realize.name)
   return out
 
@@ -342,9 +390,9 @@ def from_ft_20_6(foo) :
   return foo / 64.0
 
 def sql_min_max(l, MAX=False) :
-  fn = lambda x, y : x <= y
+  fn = lambda x, y : or_(x <= y, x == None)
   if MAX :
-    fn = lambda x, y : x >= y
+    fn = lambda x, y : or_(x >= y, y == None)
   L = []
   for x in range(len(l)) :
     to_add = []

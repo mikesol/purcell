@@ -43,7 +43,7 @@ def generate_ddl(glyph_box, rhythmic_event_width, dot_width, rhythmic_event_to_d
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [rhythmic_event_width, dot_width]]
+     for table in [rhythmic_event_width, dot_width, rhythmic_event_to_dot_padding]]
 
   return OUT
 

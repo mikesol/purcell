@@ -1,5 +1,5 @@
 from sqlalchemy import Integer, Float, String
-from plain import make_table, Fraction
+from plain import make_table, Fraction, Line, Glyph
 
 Score = make_table('score', Integer)
 Staff = make_table('staff', Integer)
@@ -68,7 +68,20 @@ Glyph_idx = make_table('glyph_idx', Integer)
 Rhythmic_event_width = make_table('rhythmic_event_width', Float)
 Dot_width = make_table('dot_width', Float)
 Accidental_width = make_table('accidental_width', Float)
+Left_width = make_table('left_width', Float)
 Right_width = make_table('right_width', Float)
 Width = make_table('width', Float)
 
+Space_prev = make_table('space_prev', Float)
+X_position = make_table('x_position', Float)
+
 Graphical_next = make_table('graphical_next', Integer)
+
+Line_thickness = make_table('line_thickness', Float)
+Line_stencil = make_table('line_stencil', Line)
+
+# Staff symbol
+N_lines = make_table('n_lines', Integer)
+Staff_space = make_table('staff_space', Float)
+
+Glyph_stencil = make_table('glyph_stencil', Glyph)
