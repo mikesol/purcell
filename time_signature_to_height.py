@@ -22,13 +22,14 @@ class _Insert(InsertStmt) :
     time_signatures_to_heights = select([
       name.c.id.label('id'),
       (from_ft_20_6(string_box_a_1.c.height) * font_size.c.val / 20.0) +
-                 time_signature_inter_number_padding.c.val + 
+                 case([(time_signature_inter_number_padding.c.val != None, time_signature_inter_number_padding.c.val)], else_ = time_signature_inter_number_padding_default.c.val) + 
                  ((from_ft_20_6(string_box_a_2.c.height) * font_size.c.val / 20.0)).label('val')
-    ]).select_from(name.outerjoin(time_signature_inter_number_padding, onclause = name.c.id == time_signature_inter_number_padding.c.id)).\
+    ]).select_from(name.outerjoin(height, onclause = name.c.id == height.c.id).outerjoin(time_signature_inter_number_padding, onclause = name.c.id == time_signature_inter_number_padding.c.id)).\
         where(and_(name.c.val == 'time_signature',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == time_signature.c.id,
+                  height.c.val == None,
                   time_signature_inter_number_padding_default.c.id == -1,
                   font_name.c.val == string_box_a_1.c.name,
                   font_name.c.val == string_box_a_2.c.name,
@@ -91,7 +92,7 @@ if __name__ == "__main__" :
   stmts.append((Name, {'id':0,'val':'time_signature'}))
   stmts.append((Font_name, {'id':0,'val':'emmentaler-20'}))
   stmts.append((Font_size, {'id':0,'val':20}))
-  stmts.append((Time_signature_inter_number_padding, {'id':0,'val' : 0.0}))
+  #stmts.append((Time_signature_inter_number_padding, {'id':0,'val' : 0.0}))
   stmts.append((Time_signature, {'id':0,'num':3,'den':4}))
   # 554 is 4, 553 is 3, etc.
 

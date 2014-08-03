@@ -264,23 +264,25 @@ class DeleteStmt(object) :
           where_clause[x] = where_clause[x].replace(self.table.name, "")
           break
       where_clause = '\n'.join(where_clause)
-    elif where_clause :
+    elif isinstance(where_clause, BinaryExpression)  :
       # hideous!!!
       where_clause = str(where_clause.compile(compile_kwargs={"literal_binds": True}))
     if where_clause :
       return self.table.delete().where(text(str(where_clause)))
     else :
+      print "````` you may want to do some debugging here"
+      print "````` a full delete is happening on", self.table.name
       return self.table.delete()
   def debug_before(self, id, conn, verbose = _GLOBAL_VERBOSE) :
-    print "$$$", "BEFORE DELETE"
+    print "$$$", "BEFORE DELETE ON", self.table.name
     for row in conn.execute(select([self.table])) :
       print "    ", row
-    print "&&&&& executing this DELETE"
+    print "&&&&& executing the DELETE statement below ON", self.table.name
     stmt = self.get_stmt(id)
     print stmt
     #conn.execute(stmt)
   def debug_after(self, id, conn, verbose = _GLOBAL_VERBOSE) :
-    print "$$$", "AFTER DELETE"
+    print "$$$", "AFTER DELETE ON", self.table.name
     for row in conn.execute(select([self.table])) :
       print "    ", row
 
@@ -364,19 +366,20 @@ class DDL_manager(object) :
     ddls = filter(lambda x : x.before == before, self.ddls)
     for ddl in ddls :
       if (ddl.table == table) and (ddl.action == action) :
-        print "@", ddl.table.name, table.name, ddl.action, action
         for id in ids :
           for delete in ddl.deletes :
             delete.debug_before(conn = conn, id = id)
             stmt = delete.get_stmt(id = id)
-            print "--PERFORMING DELETE ON", stmt.table.name
+            print "--PERFORMING DELETE ON", stmt.table.name, "TRIGGERED By", action, "ON", table.name
             print stmt
             self.delete(conn, stmt, True)
+            delete.debug_after(conn = conn, id = id)
           for insert in ddl.inserts :
             insert.debug_before(conn = conn)
             stmt = insert.get_stmt()
-            print "++PERFORMING INSERT ON", stmt.table.name
+            print "--PERFORMING INSERT ON", stmt.table.name, "TRIGGERED By", action, "ON", table.name
             self.insert(conn, stmt, True)
+            insert.debug_after(conn = conn)
 
 def realize(to_realize, comp_t, prop) :
   #out = select([v.label(k) for k,v in to_realize.c.items()]).\

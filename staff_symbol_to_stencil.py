@@ -39,10 +39,12 @@ class _Insert(InsertStmt) :
         name.\
         join(line_thickness, onclause = name.c.id == line_thickness.c.id).\
         join(n_lines, onclause = name.c.id == n_lines.c.id).\
-        join(staff_space, onclause = name.c.id == staff_space.c.id)
+        join(staff_space, onclause = name.c.id == staff_space.c.id).\
+        outerjoin(line_stencil, onclause = name.c.id == line_stencil.c.id)
       ).where(name.c.val == "staff_symbol").\
         where(x_position_min_max.c.x_position_min != None).\
         where(x_position_min_max.c.x_position_max != None).\
+        where(line_stencil.c.sub_id == None).\
         where(n_lines.c.val > 0).cte(name = 'line_from_staff_symbol', recursive = True)
 
     self.register_stmt(first_line)

@@ -28,10 +28,33 @@ from sqlalchemy import event, DDL
 
 
 LOG = True
-ECHO = True
-#ECHO = False
+#ECHO = True
+ECHO = False
 MANUAL_DDL = False
 #MANUAL_DDL = True
+TABLES_TO_REPORT = [Line_stencil, Glyph_stencil, String_stencil, X_position]
+
+T = True
+F = False
+
+TUPLET_TO_FACTOR = T
+RHYTHMIC_EVENTS_TO_DURATIONS = T
+CLEF_TO_WIDTH = T
+KEY_SIGNATURE_TO_WIDTH = T
+TIME_SIGNATURE_TO_WIDTH = T
+TIME_SIGNATURE_TO_HEIGHT = T
+ACCIDENTAL_TO_WIDTH = T
+DOTS_TO_WIDTH = T
+RHYTHMIC_EVENTS_TO_RIGHT_WIDTH = T
+RHYTHMIC_EVENTS_TO_LEFT_WIDTH = T
+NEXTS_TO_GRAPHICAL_NEXT  = T
+GRAPHICAL_NEXT_TO_SPACE_PREV = T
+SPACE_PREV_TO_X_POSITION  = T
+DURATION_LOG_TO_WIDTH = T
+STAFF_SYMBOL_TO_STENCIL = T
+CLEF_TO_STENCIL = T
+TIME_SIGNATURE_TO_STENCIL = T
+
 #engine = create_engine('postgresql://localhost/postgres', echo=False)
 engine = create_engine('sqlite:///memory', echo=ECHO)
 conn = engine.connect()
@@ -39,20 +62,26 @@ conn = engine.connect()
 generate_sqlite_functions(conn)
 
 manager = DDL_manager()
+
 ###############################
-manager.ddls += tuplet_to_factor.generate_ddl(name = Name,
+if TUPLET_TO_FACTOR :
+  manager.ddls += tuplet_to_factor.generate_ddl(name = Name,
                     left_bound = Left_bound,
                     right_bound = Right_bound,
                     time_next = Time_next,
                     tuplet_fraction = Tuplet_fraction,
                     tuplet_factor = Tuplet_factor)
+
 ###############################
-manager.ddls += rhythmic_events_to_durations.generate_ddl(duration_log = Duration_log,
+if RHYTHMIC_EVENTS_TO_DURATIONS :
+  manager.ddls += rhythmic_events_to_durations.generate_ddl(duration_log = Duration_log,
                     dots = Dots,
                     tuplet_factor = Tuplet_factor,
                     duration = Duration)
 
-manager.ddls += key_signature_to_width.generate_ddl(name = Name,
+###############################
+if KEY_SIGNATURE_TO_WIDTH :
+  manager.ddls += key_signature_to_width.generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      key_signature = Key_signature,
@@ -60,7 +89,8 @@ manager.ddls += key_signature_to_width.generate_ddl(name = Name,
                                      width = Width)
 
 ###############################
-manager.ddls += clef_to_width.generate_ddl(name = Name,
+if CLEF_TO_WIDTH : 
+  manager.ddls += clef_to_width.generate_ddl(name = Name,
                                    font_name = Font_name,
                                    font_size = Font_size,
                                    glyph_idx = Glyph_idx,
@@ -68,7 +98,8 @@ manager.ddls += clef_to_width.generate_ddl(name = Name,
                                    width = Width)
 
 ###############################
-manager.ddls += time_signature_to_width.generate_ddl(name = Name,
+if TIME_SIGNATURE_TO_WIDTH : 
+  manager.ddls += time_signature_to_width.generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      time_signature = Time_signature,
@@ -76,7 +107,8 @@ manager.ddls += time_signature_to_width.generate_ddl(name = Name,
                                      width = Width)
 
 ###############################
-manager.ddls += time_signature_to_height.generate_ddl(name = Name,
+if TIME_SIGNATURE_TO_HEIGHT :
+  manager.ddls += time_signature_to_height.generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      time_signature = Time_signature,
@@ -85,14 +117,16 @@ manager.ddls += time_signature_to_height.generate_ddl(name = Name,
                                      height = Height)
 
 ###############################
-manager.ddls += accidental_to_width.generate_ddl(font_name = Font_name,
+if ACCIDENTAL_TO_WIDTH :
+  manager.ddls += accidental_to_width.generate_ddl(font_name = Font_name,
                                      font_size = Font_size,
                                      accidental = Accidental,
                                      glyph_box = Glyph_box,
                                      accidental_width = Accidental_width)
 
 ################################
-manager.ddls += duration_log_to_width.generate_ddl(font_name = Font_name,
+if DURATION_LOG_TO_WIDTH :
+  manager.ddls += duration_log_to_width.generate_ddl(font_name = Font_name,
                                      font_size = Font_size,
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
@@ -100,7 +134,8 @@ manager.ddls += duration_log_to_width.generate_ddl(font_name = Font_name,
                                      rhythmic_event_width = Rhythmic_event_width)
 
 ###############################
-manager.ddls += dots_to_width.generate_ddl(font_name = Font_name,
+if DOTS_TO_WIDTH :
+  manager.ddls += dots_to_width.generate_ddl(font_name = Font_name,
                                      font_size = Font_size,
                                      dots = Dots,
                                      glyph_box = Glyph_box,
@@ -109,27 +144,31 @@ manager.ddls += dots_to_width.generate_ddl(font_name = Font_name,
 
 
 ###############################
-manager.ddls += rhythmic_events_to_right_width.generate_ddl(glyph_box = Glyph_box,
+if RHYTHMIC_EVENTS_TO_RIGHT_WIDTH :
+  manager.ddls += rhythmic_events_to_right_width.generate_ddl(glyph_box = Glyph_box,
                                      rhythmic_event_width = Rhythmic_event_width,
                                      dot_width = Dot_width,
                                      rhythmic_event_to_dot_padding = Rhythmic_event_to_dot_padding,
                                      right_width = Right_width)
 
 ###############################
-manager.ddls += rhythmic_events_to_left_width.generate_ddl(glyph_box = Glyph_box,
+if RHYTHMIC_EVENTS_TO_LEFT_WIDTH :
+  manager.ddls += rhythmic_events_to_left_width.generate_ddl(glyph_box = Glyph_box,
                                      rhythmic_event_width = Rhythmic_event_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
                                      left_width = Left_width)
 
 ###############################
-manager.ddls += nexts_to_graphical_next.generate_ddl(horstemps_anchor = Horstemps_anchor,
+if NEXTS_TO_GRAPHICAL_NEXT :
+  manager.ddls += nexts_to_graphical_next.generate_ddl(horstemps_anchor = Horstemps_anchor,
                                      horstemps_next = Horstemps_next,
                                      time_next = Time_next,
                                      graphical_next = Graphical_next)
 
 ###############################
-manager.ddls += graphical_next_to_space_prev.generate_ddl(graphical_next = Graphical_next,
+if GRAPHICAL_NEXT_TO_SPACE_PREV :
+  manager.ddls += graphical_next_to_space_prev.generate_ddl(graphical_next = Graphical_next,
                                      name = Name,
                                      width = Width,
                                      left_width = Left_width,
@@ -138,27 +177,21 @@ manager.ddls += graphical_next_to_space_prev.generate_ddl(graphical_next = Graph
                                      space_prev = Space_prev)
 
 ###############################
-manager.ddls += space_prev_to_x_position.generate_ddl(graphical_next = Graphical_next,
+if SPACE_PREV_TO_X_POSITION :
+  manager.ddls += space_prev_to_x_position.generate_ddl(graphical_next = Graphical_next,
                                      space_prev = Space_prev,
                                      x_position = X_position)
-
 ###############################
-manager.ddls += clef_to_stencil.generate_ddl(name = Name,
+if CLEF_TO_STENCIL :
+  manager.ddls += clef_to_stencil.generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      glyph_idx = Glyph_idx,
                                      glyph_stencil = Glyph_stencil)
 
 ###############################
-manager.ddls += staff_symbol_to_stencil.generate_ddl(name = Name,
-                                     line_thickness = Line_thickness,
-                                     n_lines = N_lines,
-                                     staff_space = Staff_space,
-                                     x_position = X_position,
-                                     line_stencil = Line_stencil)
-###############################
-# xxxx
-manager.ddls += time_signature_to_stencil.generate_ddl(name = Name,
+if TIME_SIGNATURE_TO_STENCIL :
+  manager.ddls += time_signature_to_stencil.generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      time_signature = Time_signature,
@@ -166,6 +199,14 @@ manager.ddls += time_signature_to_stencil.generate_ddl(name = Name,
                                      width = Width,
                                      height = Height,
                                      stencil = String_stencil)
+###############################
+if STAFF_SYMBOL_TO_STENCIL :
+  manager.ddls += staff_symbol_to_stencil.generate_ddl(name = Name,
+                                     line_thickness = Line_thickness,
+                                     n_lines = N_lines,
+                                     staff_space = Staff_space,
+                                     x_position = X_position,
+                                     line_stencil = Line_stencil)
 
 if not MANUAL_DDL :
   manager.register_ddls(conn, LOG = True)
@@ -273,22 +314,9 @@ for st in stmts :
   manager.insert(conn, st[0].insert().values(**st[1]), MANUAL_DDL)
 trans.commit()
 
-NOW = time.time()
-for row in conn.execute(select([X_position])).fetchall() :
-  print row
-
-print "*"*40
-
-for row in conn.execute(select([Line_stencil])).fetchall() :
-  print row
-
-print ">"*40
-
-for row in conn.execute(select([Glyph_stencil])).fetchall() :
-  print row
-
-print "!"*40
-
-for row in conn.execute(select([String_stencil])).fetchall() :
-  print row
-
+for table in TABLES_TO_REPORT :
+  print "!+"*40
+  print "reporting on", table.name
+  print "$%"*40
+  for row in conn.execute(select([table])).fetchall() :
+    print row

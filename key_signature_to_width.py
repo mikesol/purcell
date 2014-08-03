@@ -6,10 +6,12 @@ import emmentaler_tools
 # need to find a way to work font size into this...
 
 class _Delete(DeleteStmt) :
-  def __init__(self, width, name) :
+  #def __init__(self, width, name) :
+  def __init__(self, width) :
     def where_clause_fn(id) :
-      stmt = select([name.c.id]).where(and_(width.c.id == id, name.c.id == id, name.c.val == 'key_signature'))
-      return exists(stmt)
+      #stmt = select([name.c.id]).where(and_(width.c.id == id, name.c.id == id, name.c.val == 'key_signature'))
+      #return exists(stmt)
+      return width.c.id == id
     DeleteStmt.__init__(self, width, where_clause_fn)
 
 class _Insert(InsertStmt) :
@@ -42,7 +44,8 @@ def generate_ddl(name, font_name, font_size, key_signature, glyph_box, width) :
 
   insert_stmt = _Insert(name, font_name, font_size, key_signature, glyph_box, width)
 
-  del_stmt = _Delete(width, name)
+  #del_stmt = _Delete(width, name)
+  del_stmt = _Delete(width)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']

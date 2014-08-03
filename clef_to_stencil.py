@@ -22,10 +22,11 @@ class _Insert(InsertStmt) :
       glyph_idx.c.val.label('glyph_idx'),
       literal(0).label('x'),
       literal(0).label('y'),
-    ]).where(and_(name.c.val == 'clef',
+    ]).select_from(name.outerjoin(glyph_stencil, onclause = name.c.id == glyph_stencil.c.id)).where(and_(name.c.val == 'clef',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == glyph_idx.c.id,
+                  glyph_stencil.c.sub_id == None
                   )).\
     cte(name='clefs_to_stencils')
 
