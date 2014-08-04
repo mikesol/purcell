@@ -89,6 +89,11 @@ String_box = Table('string_box', _metadata,
   Column('height', Integer)
   )
 
+Key_signature_layout_info = Table('key_signature_layout_info', _metadata,
+  Column('accidental', Integer, primary_key = True),
+  Column('place', Float)
+)
+
 class JoinK(object) :
   def __init__(self, table) :
     self.table = table

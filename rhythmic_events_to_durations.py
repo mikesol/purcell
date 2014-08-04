@@ -51,12 +51,12 @@ class _Insert(InsertStmt) :
 
     rhythmic_events_to_durations =\
       select([durationless_duration_logs.c.id,
-              func.coalesce(durationless_tuplet_factors.c.num, 1) *\
+              (func.coalesce(durationless_tuplet_factors.c.num, 1) *\
               ((2 * func.pow(2, func.coalesce(durationless_dots.c.val,0))) - 1 ) *\
-              case([(durationless_duration_logs.c.val > 0, func.pow(2,durationless_duration_logs.c.val))], else_ = 1),
-              func.coalesce(durationless_tuplet_factors.c.den, 1) *\
+              case([(durationless_duration_logs.c.val > 0, func.pow(2,durationless_duration_logs.c.val))], else_ = 1)).label('num'),
+              (func.coalesce(durationless_tuplet_factors.c.den, 1) *\
               func.pow(2, func.coalesce(durationless_dots.c.val,0)) *\
-              case([(durationless_duration_logs.c.val < 0, func.pow(2,func.abs(durationless_duration_logs.c.val)))], else_ = 1)]).\
+              case([(durationless_duration_logs.c.val < 0, func.pow(2,func.abs(durationless_duration_logs.c.val)))], else_ = 1)).label('den')]).\
         select_from(durationless_duration_logs.\
           outerjoin(durationless_tuplet_factors,
                     onclause = durationless_duration_logs.c.id ==\
@@ -67,7 +67,9 @@ class _Insert(InsertStmt) :
 
     self.register_stmt(rhythmic_events_to_durations)
 
-    self.insert = duration.insert().from_select(['id','num', 'den'], rhythmic_events_to_durations)
+    gcdd = gcd_table(rhythmic_events_to_durations).cte(name="rhythmic_events_to_durations_gcd")
+
+    self.insert = duration.insert().from_select(['id','num', 'den'], gcdd)
 
 def generate_ddl(duration_log, dots, tuplet_factor,
                    duration, conn=None, LOG=False) :

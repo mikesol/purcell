@@ -16,10 +16,11 @@ import duration_log_to_width
 import staff_symbol_to_stencil
 import clef_to_stencil
 import time_signature_to_stencil
+import key_signature_to_stencil
+import duration_log_to_stencil
 
 import emmentaler_tools
-
-import time
+import key_signature_tools
 
 from plain import *
 from properties import *
@@ -28,8 +29,8 @@ from sqlalchemy import event, DDL
 
 
 LOG = True
-#ECHO = True
-ECHO = False
+ECHO = True
+#ECHO = False
 MANUAL_DDL = False
 #MANUAL_DDL = True
 TABLES_TO_REPORT = [Line_stencil, Glyph_stencil, String_stencil, X_position]
@@ -54,6 +55,8 @@ DURATION_LOG_TO_WIDTH = T
 STAFF_SYMBOL_TO_STENCIL = T
 CLEF_TO_STENCIL = T
 TIME_SIGNATURE_TO_STENCIL = T
+KEY_SIGNATURE_TO_STENCIL = T
+DURATION_LOG_TO_STENCIL = T
 
 #engine = create_engine('postgresql://localhost/postgres', echo=False)
 engine = create_engine('sqlite:///memory', echo=ECHO)
@@ -65,7 +68,7 @@ manager = DDL_manager()
 
 ###############################
 if TUPLET_TO_FACTOR :
-  manager.ddls += tuplet_to_factor.generate_ddl(name = Name,
+  manager.ddls += tuplet_to_factor.generate_ddl(
                     left_tuplet_bound = Left_tuplet_bound,
                     right_tuplet_bound = Right_tuplet_bound,
                     time_next = Time_next,
@@ -208,6 +211,24 @@ if STAFF_SYMBOL_TO_STENCIL :
                                      x_position = X_position,
                                      line_stencil = Line_stencil)
 
+###############################
+if KEY_SIGNATURE_TO_STENCIL :
+  manager.ddls += key_signature_to_stencil.generate_ddl(name = Name,
+                            font_name = Font_name,
+                            font_size = Font_size,
+                            key_signature = Key_signature, 
+                            width = Width,
+                            key_signature_layout_info = Key_signature_layout_info,
+                            glyph_stencil = Glyph_stencil)
+
+###############################
+if DURATION_LOG_TO_STENCIL :
+  manager.ddls += duration_log_to_stencil.generate_ddl(font_name = Font_name,
+                                     font_size = Font_size,
+                                     duration_log = Duration_log,
+                                     name = Name,
+                                     glyph_stencil = Glyph_stencil)
+
 if not MANUAL_DDL :
   manager.register_ddls(conn, LOG = True)
 
@@ -217,6 +238,7 @@ Score.metadata.create_all(engine)
 emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
 emmentaler_tools.add_to_string_box_table(conn, String_box, '3')
 emmentaler_tools.add_to_string_box_table(conn, String_box, '4')
+key_signature_tools.populate_key_signature_info_table(conn, Key_signature_layout_info)
 
 stmts = []
 

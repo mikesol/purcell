@@ -13,7 +13,7 @@ class _Delete(DeleteStmt) :
 class _Delete_XP(DeleteStmt) :
   def __init__(self, line_stencil) :
     def where_clause_fn(id) :
-      return None
+      return line_stencil.c.id == id
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :

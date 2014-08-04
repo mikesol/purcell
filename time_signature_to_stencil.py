@@ -8,7 +8,7 @@ import emmentaler_tools
 class _Delete(DeleteStmt) :
   def __init__(self, stencil) :
     def where_clause_fn(id) :
-      stencil.c.id == id
+      return stencil.c.id == id
     DeleteStmt.__init__(self, stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :

@@ -4,6 +4,7 @@ from sqlalchemy import func
 from sqlalchemy import bindparam
 from plain import *
 import time
+import sys
 
 class _Delete(DeleteStmt) :
   def __init__(self, tuplet_factor, time_next,
@@ -20,7 +21,7 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, tuplet_factor, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, left_tuplet_bound,
+  def __init__(self, left_tuplet_bound,
                     right_tuplet_bound, time_next,
                     tuplet_fraction,
                     tuplet_factor) :
@@ -28,8 +29,7 @@ class _Insert(InsertStmt) :
 
     tuplets = easy_sj([left_tuplet_bound, right_tuplet_bound,
                        tuplet_fraction],
-                      extras = [name], use_id = True).\
-                where(name.c.val == "tuplet").\
+                      use_id = True).\
                 cte("tuplets")
 
     self.register_stmt(tuplets)
@@ -87,14 +87,14 @@ class _Insert(InsertStmt) :
     self.insert = tuplet_factor.insert().from_select(['id','num','den'],
                     rhythmic_events_to_matching_tuplets_to_update)
 
-def generate_ddl(name, left_tuplet_bound,
+def generate_ddl(left_tuplet_bound,
                    right_tuplet_bound, time_next,
                    tuplet_fraction,
                    tuplet_factor) :
 
   OUT = []
 
-  insert_stmt = _Insert(name, left_tuplet_bound, right_tuplet_bound,
+  insert_stmt = _Insert(left_tuplet_bound, right_tuplet_bound,
                          time_next, tuplet_fraction,
                          tuplet_factor)
 
@@ -102,7 +102,7 @@ def generate_ddl(name, left_tuplet_bound,
                           left_tuplet_bound, right_tuplet_bound)
 
   #for table in [tuplet_fraction, left_tuplet_bound, right_tuplet_bound, name] :
-  for table in [tuplet_fraction, left_tuplet_bound, right_tuplet_bound, name, time_next] :
+  for table in [tuplet_fraction, left_tuplet_bound, right_tuplet_bound, time_next] :
     OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt]) for action in ['INSERT', 'UPDATE', 'DELETE']]
 
   return OUT
@@ -120,7 +120,7 @@ if __name__ == "__main__" :
   conn = engine.connect()
   generate_sqlite_functions(conn)
 
-  manager = DDL_manager(generate_ddl(name = Name,
+  manager = DDL_manager(generate_ddl(
                         left_tuplet_bound = Left_tuplet_bound,
                         right_tuplet_bound = Right_tuplet_bound,
                         time_next = Time_next,
@@ -147,7 +147,6 @@ if __name__ == "__main__" :
   INSTR = [[0,16,2,3], [4,16,2,3], [7,19,4,5], [21,37,4,7], [37,37,2,3]]
 
   for x in range(len(INSTR)) :
-    stmts.append((Name, {'id':BIG + x, 'val':"tuplet"}))
     stmts.append((Left_tuplet_bound, {'id':BIG + x, 'val':INSTR[x][0]}))
     stmts.append((Right_tuplet_bound, {'id':BIG + x, 'val':INSTR[x][1]}))
     stmts.append((Tuplet_fraction, {'id':BIG + x, 'num':INSTR[x][2], 'den':INSTR[x][3]}))
