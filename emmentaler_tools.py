@@ -1,26 +1,45 @@
 import freetype
 from freetype.ft_errors import FT_Exception
 
-def populate_glyph_box_table(conn, table) :
-  #face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
-  face = freetype.Face("/home/mirjam/.fonts/emmentaler-20.otf")
-  face.set_char_size( 20 << 6 )
+def populate_glyph_box_table(conn, table, from_cache = False, make_cache = False) :
+  if not from_cache :
+    #face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
+    face = freetype.Face("/home/mirjam/.fonts/emmentaler-20.otf")
+    face.set_char_size( 20 << 6 )
   # devnull
   conn.execute(table.insert().values(name = "emmentaler-20", idx = -1, x = 0, width = 0, y = 0, height = 0))
   x = 0
-  while True :
-    try :
-      face.load_glyph(x)
-      #face.load_glyph(x, freetype.FT_LOAD_NO_SCALE)
-      #print face.units_per_EM
-      xMin = face.glyph.outline.get_bbox().xMin
-      xMax = face.glyph.outline.get_bbox().xMax
-      yMin = face.glyph.outline.get_bbox().yMin
-      yMax = face.glyph.outline.get_bbox().yMax
-      conn.execute(table.insert().values(name = "emmentaler-20", idx = x, x = xMin, width = xMax - xMin, y = yMin, height = yMax - yMin))
-      x += 1
-    except FT_Exception :
-      break  
+  CACHE = []
+  if not from_cache :
+    while True :
+      try :
+        face.load_glyph(x)
+        #face.load_glyph(x, freetype.FT_LOAD_NO_SCALE)
+        #print face.units_per_EM
+        xMin = face.glyph.outline.get_bbox().xMin
+        xMax = face.glyph.outline.get_bbox().xMax
+        yMin = face.glyph.outline.get_bbox().yMin
+        yMax = face.glyph.outline.get_bbox().yMax
+        CACHE.append({'name' : "emmentaler-20", 'idx' : x, 'x' : xMin, 'width' : xMax - xMin, 'y' : yMin, 'height' : yMax - yMin})
+        x += 1
+      except FT_Exception :
+        break  
+  else :
+    emmentaler_cache = file('emmentaler-cache.txt', 'r')
+    cached_values = emmentaler_cache.read().split('\n')
+    emmentaler_cache.close()
+    for line in cached_values :
+      elts = line.split(' ')
+      CACHE.append({'name' : elts[0], 'idx' : elts[1], 'x' : elts[2], 'width' : elts[3], 'y' : elts[4], 'height' : elts[5]})
+  trans = conn.begin()
+  for elt in CACHE :
+    conn.execute(table.insert().values(**elt))
+  trans.commit()
+  if make_cache :
+    emmentaler_cache = file('emmentaler-cache.txt', 'w')
+    for elt in CACHE :
+      emmentaler_cache.write(' '.join(elt.values()))
+    emmentaler_cache.close()
 
 def add_to_string_box_table(conn, table, gnirts) :
   #face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
