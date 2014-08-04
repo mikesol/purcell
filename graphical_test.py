@@ -27,10 +27,11 @@ from properties import *
 from sqlalchemy import create_engine
 from sqlalchemy import event, DDL
 
+import json
 
 LOG = True
-ECHO = True
-#ECHO = False
+#ECHO = True
+ECHO = False
 MANUAL_DDL = False
 #MANUAL_DDL = True
 TABLES_TO_REPORT = [Line_stencil, Glyph_stencil, String_stencil, X_position]
@@ -332,13 +333,21 @@ stmts.append((Staff_space, {'id':9, 'val':0.5}))
 
 trans = conn.begin()
 for st in stmts :
-  print "~~~~~~~~~~~~~~~~~~~~~~~", st[0].name, st[1]
+  #print "~~~~~~~~~~~~~~~~~~~~~~~", st[0].name, st[1]
   manager.insert(conn, st[0].insert().values(**st[1]), MANUAL_DDL)
 trans.commit()
 
+
+OUT = {}
 for table in TABLES_TO_REPORT :
-  print "!+"*40
-  print "reporting on", table.name
-  print "$%"*40
+  #print "!+"*40
+  #print "reporting on", table.name
+  #print "$%"*40
+  #for row in conn.execute(select([table])).fetchall() :
+  #  print row
+  sub_d = {'columns':table.c.keys(),'rows':[]}
   for row in conn.execute(select([table])).fetchall() :
-    print row
+    sub_d['rows'].append(list(row))
+  OUT[table.name] = sub_d
+
+print json.dumps(OUT)
