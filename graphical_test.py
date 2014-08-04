@@ -66,8 +66,8 @@ manager = DDL_manager()
 ###############################
 if TUPLET_TO_FACTOR :
   manager.ddls += tuplet_to_factor.generate_ddl(name = Name,
-                    left_bound = Left_bound,
-                    right_bound = Right_bound,
+                    left_tuplet_bound = Left_tuplet_bound,
+                    right_tuplet_bound = Right_tuplet_bound,
                     time_next = Time_next,
                     tuplet_fraction = Tuplet_fraction,
                     tuplet_factor = Tuplet_factor)

@@ -25,8 +25,8 @@ generate_sqlite_functions(conn)
 manager = DDL_manager()
 ###############################
 manager.ddls += tuplet_to_factor.generate_ddl(name = Name,
-                    left_bound = Left_bound,
-                    right_bound = Right_bound,
+                    left_tuplet_bound = Left_tuplet_bound,
+                    right_tuplet_bound = Right_tuplet_bound,
                     time_next = Time_next,
                     tuplet_fraction = Tuplet_fraction,
                     tuplet_factor = Tuplet_factor)
@@ -146,8 +146,8 @@ for x in range(BIG) :
 
 for x in range(len(INSTR)) :
   stmts.append((Name, {'id':BIG + x, 'val':"tuplet"}))
-  stmts.append((Left_bound, {'id':BIG + x, 'val':INSTR[x][0]}))
-  stmts.append((Right_bound, {'id':BIG + x, 'val':INSTR[x][1]}))
+  stmts.append((Left_tuplet_bound, {'id':BIG + x, 'val':INSTR[x][0]}))
+  stmts.append((Right_tuplet_bound, {'id':BIG + x, 'val':INSTR[x][1]}))
   stmts.append((Tuplet_fraction, {'id':BIG + x, 'num':INSTR[x][2], 'den':INSTR[x][3]}))
 
 BIGGER = BIG + len(INSTR)

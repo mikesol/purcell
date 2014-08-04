@@ -7,26 +7,26 @@ import time
 
 class _Delete(DeleteStmt) :
   def __init__(self, tuplet_factor, time_next,
-                    left_bound, right_bound) :
+                    left_tuplet_bound, right_tuplet_bound) :
     def where_clause_fn(id) :
-      tuplet_bounds = easy_sj([left_bound, right_bound], use_id=True).\
-        where(left_bound.c.id == id).cte("tuplet_bounds")
-      linked_list = bound_range(tuplet_bounds.c.left_bound_val,
+      tuplet_bounds = easy_sj([left_tuplet_bound, right_tuplet_bound], use_id=True).\
+        where(left_tuplet_bound.c.id == id).cte("tuplet_bounds")
+      linked_list = bound_range(tuplet_bounds.c.left_tuplet_bound_val,
                                 time_next,
-                                tuplet_bounds.c.right_bound_val)
+                                tuplet_bounds.c.right_tuplet_bound_val)
       stmt = select([linked_list]).where(linked_list.c.elt == tuplet_factor.c.id)
       stmt = exists(stmt)
       return stmt
     DeleteStmt.__init__(self, tuplet_factor, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, left_bound,
-                    right_bound, time_next,
+  def __init__(self, name, left_tuplet_bound,
+                    right_tuplet_bound, time_next,
                     tuplet_fraction,
                     tuplet_factor) :
     InsertStmt.__init__(self)
 
-    tuplets = easy_sj([left_bound, right_bound,
+    tuplets = easy_sj([left_tuplet_bound, right_tuplet_bound,
                        tuplet_fraction],
                       extras = [name], use_id = True).\
                 where(name.c.val == "tuplet").\
@@ -37,11 +37,11 @@ class _Insert(InsertStmt) :
     # ugggh... tuplet_factor is NULL not working
     rhythmic_events_to_tuplets =\
       select([tuplets.c.id.label('tuplet_id'),
-              tuplets.c.left_bound_val.label('left_val'),
-              tuplets.c.right_bound_val.label('right_val'),
+              tuplets.c.left_tuplet_bound_val.label('left_val'),
+              tuplets.c.right_tuplet_bound_val.label('right_val'),
               tuplets.c.tuplet_fraction_num.label('numerator'),
               tuplets.c.tuplet_fraction_den.label('denominator')]).\
-        select_from(tuplets.outerjoin(tuplet_factor, onclause = tuplets.c.left_bound_val == tuplet_factor.c.id)).\
+        select_from(tuplets.outerjoin(tuplet_factor, onclause = tuplets.c.left_tuplet_bound_val == tuplet_factor.c.id)).\
         cte(name = "rhythmic_events_to_tuplets", recursive = True)
 
 
@@ -87,22 +87,22 @@ class _Insert(InsertStmt) :
     self.insert = tuplet_factor.insert().from_select(['id','num','den'],
                     rhythmic_events_to_matching_tuplets_to_update)
 
-def generate_ddl(name, left_bound,
-                   right_bound, time_next,
+def generate_ddl(name, left_tuplet_bound,
+                   right_tuplet_bound, time_next,
                    tuplet_fraction,
                    tuplet_factor) :
 
   OUT = []
 
-  insert_stmt = _Insert(name, left_bound, right_bound,
+  insert_stmt = _Insert(name, left_tuplet_bound, right_tuplet_bound,
                          time_next, tuplet_fraction,
                          tuplet_factor)
 
   del_stmt = _Delete(tuplet_factor, time_next,
-                          left_bound, right_bound)
+                          left_tuplet_bound, right_tuplet_bound)
 
-  #for table in [tuplet_fraction, left_bound, right_bound, name] :
-  for table in [tuplet_fraction, left_bound, right_bound, name, time_next] :
+  #for table in [tuplet_fraction, left_tuplet_bound, right_tuplet_bound, name] :
+  for table in [tuplet_fraction, left_tuplet_bound, right_tuplet_bound, name, time_next] :
     OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt]) for action in ['INSERT', 'UPDATE', 'DELETE']]
 
   return OUT
@@ -121,8 +121,8 @@ if __name__ == "__main__" :
   generate_sqlite_functions(conn)
 
   manager = DDL_manager(generate_ddl(name = Name,
-                        left_bound = Left_bound,
-                        right_bound = Right_bound,
+                        left_tuplet_bound = Left_tuplet_bound,
+                        right_tuplet_bound = Right_tuplet_bound,
                         time_next = Time_next,
                         tuplet_fraction = Tuplet_fraction,
                         tuplet_factor = Tuplet_factor))
@@ -148,8 +148,8 @@ if __name__ == "__main__" :
 
   for x in range(len(INSTR)) :
     stmts.append((Name, {'id':BIG + x, 'val':"tuplet"}))
-    stmts.append((Left_bound, {'id':BIG + x, 'val':INSTR[x][0]}))
-    stmts.append((Right_bound, {'id':BIG + x, 'val':INSTR[x][1]}))
+    stmts.append((Left_tuplet_bound, {'id':BIG + x, 'val':INSTR[x][0]}))
+    stmts.append((Right_tuplet_bound, {'id':BIG + x, 'val':INSTR[x][1]}))
     stmts.append((Tuplet_fraction, {'id':BIG + x, 'num':INSTR[x][2], 'den':INSTR[x][3]}))
 
   trans = conn.begin()

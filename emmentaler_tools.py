@@ -2,7 +2,8 @@ import freetype
 from freetype.ft_errors import FT_Exception
 
 def populate_glyph_box_table(conn, table) :
-  face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
+  #face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
+  face = freetype.Face("/home/mirjam/.fonts/emmentaler-20.otf")
   face.set_char_size( 20 << 6 )
   # devnull
   conn.execute(table.insert().values(name = "emmentaler-20", idx = -1, x = 0, width = 0, y = 0, height = 0))
@@ -22,7 +23,8 @@ def populate_glyph_box_table(conn, table) :
       break  
 
 def add_to_string_box_table(conn, table, gnirts) :
-  face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
+  #face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
+  face = freetype.Face("/home/mirjam/.fonts/emmentaler-20.otf")
   face.set_char_size( 20 << 6 )
   x = 0
   xMin = 0

@@ -55,8 +55,8 @@ Rhythmic_event_to_dot_padding = make_table('rhythmic_event_to_dot_padding', Floa
 Rhythmic_event_to_accidental_padding = make_table('rhythmic_event_to_accidental_padding', Float)
 Time_signature_inter_number_padding = make_table('time_signature_inter_number_padding', Float)
 
-Left_bound = make_table('left_bound', Integer)
-Right_bound = make_table('right_bound', Integer)
+Left_tuplet_bound = make_table('left_tuplet_bound', Integer)
+Right_tuplet_bound = make_table('right_tuplet_bound', Integer)
 Tuplet_factor = make_table('tuplet_factor', Fraction)
 
 Horstemps_next = make_table('horstemps_next', Integer, unique=True)

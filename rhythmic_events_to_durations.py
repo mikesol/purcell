@@ -91,8 +91,8 @@ if __name__ == "__main__" :
   
   ECHO = False
   #ECHO = True
-  #MANUAL_DDL = True
-  MANUAL_DDL = False
+  MANUAL_DDL = True
+  #MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
   engine = create_engine('sqlite:///memory', echo=ECHO)
   conn = engine.connect()
