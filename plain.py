@@ -48,7 +48,7 @@ def make_table(name, tp, unique = False) :
                      Column('sub_id', Integer, primary_key = True),
                      Column('font_name', String),
                      Column('font_size', Float),
-                     Column('glyph_idx', Integer),
+                     Column('glyph_idx', String),
                      Column('x', Float),
                      Column('y', Float))
   if tp == Str :
@@ -78,6 +78,12 @@ Glyph_box = Table('glyph_box', _metadata,
   Column('y', Integer),
   Column('width', Integer),
   Column('height', Integer)
+  )
+
+Unicode_to_glyph_index_map = Table('unicode_to_glyph_index_map', _metadata,
+  Column('name', String, primary_key = True),
+  Column('idx', Integer, primary_key = True),
+  Column('unicode', String)
   )
 
 String_box = Table('string_box', _metadata,

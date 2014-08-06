@@ -11,7 +11,7 @@ import rhythmic_events_to_left_width
 import nexts_to_graphical_next
 import graphical_next_to_space_prev
 import space_prev_to_x_position
-import duration_log_to_width
+import duration_log_to_dimension
 
 import staff_symbol_to_stencil
 import clef_to_stencil
@@ -21,13 +21,18 @@ import duration_log_to_stencil
 
 import emmentaler_tools
 import key_signature_tools
+import simple_http_server
 
 from plain import *
 from properties import *
 from sqlalchemy import create_engine
-from sqlalchemy import event, DDL
+from sqlalchemy import event, DDL, text
 
 import json
+import time
+import sys
+
+print select([Line_stencil, X_position]).select_from(Line_stencil.join(X_position, onclause = Line_stencil.c.id == X_position.c.id))
 
 LOG = True
 #ECHO = True
@@ -53,6 +58,7 @@ NEXTS_TO_GRAPHICAL_NEXT  = T
 GRAPHICAL_NEXT_TO_SPACE_PREV = T
 SPACE_PREV_TO_X_POSITION  = T
 DURATION_LOG_TO_WIDTH = T
+DURATION_LOG_TO_HEIGHT = T
 STAFF_SYMBOL_TO_STENCIL = T
 CLEF_TO_STENCIL = T
 TIME_SIGNATURE_TO_STENCIL = T
@@ -130,12 +136,23 @@ if ACCIDENTAL_TO_WIDTH :
 
 ################################
 if DURATION_LOG_TO_WIDTH :
-  manager.ddls += duration_log_to_width.generate_ddl(font_name = Font_name,
+  manager.ddls += duration_log_to_dimension.generate_ddl(font_name = Font_name,
                                      font_size = Font_size,
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_width = Rhythmic_event_width)
+                                     rhythmic_event_dimension = Rhythmic_event_width,
+                                     dimension = 'width')
+
+################################
+if DURATION_LOG_TO_HEIGHT :
+  manager.ddls += duration_log_to_dimension.generate_ddl(font_name = Font_name,
+                                     font_size = Font_size,
+                                     duration_log = Duration_log,
+                                     glyph_box = Glyph_box,
+                                     name = Name,
+                                     rhythmic_event_dimension = Rhythmic_event_height,
+                                     dimension = 'height')
 
 ###############################
 if DOTS_TO_WIDTH :
@@ -210,6 +227,7 @@ if STAFF_SYMBOL_TO_STENCIL :
                                      n_lines = N_lines,
                                      staff_space = Staff_space,
                                      x_position = X_position,
+                                     rhythmic_event_height = Rhythmic_event_height,
                                      line_stencil = Line_stencil)
 
 ###############################
@@ -237,9 +255,12 @@ Score.metadata.drop_all(engine)
 Score.metadata.create_all(engine)
 
 emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
+emmentaler_tools.unicode_to_glyph_index_map(conn, Unicode_to_glyph_index_map)
 emmentaler_tools.add_to_string_box_table(conn, String_box, '3')
 emmentaler_tools.add_to_string_box_table(conn, String_box, '4')
 key_signature_tools.populate_key_signature_info_table(conn, Key_signature_layout_info)
+conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Rhythmic_event_width, 'width'))
+conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Rhythmic_event_height, 'height'))
 
 stmts = []
 
@@ -313,7 +334,7 @@ stmts.append((Duration_log, {'id':8,'val':-1}))
 
 # link up things out of time, including to their anchors
 # link up notes in time
-HT_0 = [0,1,2,None]
+HT_0 = [2,1,0,None]
 for x in range(len(HT_0) - 1) :
   stmts.append((Horstemps_next, {'id':HT_0[x], 'val':HT_0[x+1]}))
   stmts.append((Horstemps_anchor, {'id':HT_0[x], 'val':3}))
@@ -325,9 +346,9 @@ for x in range(len(HT_1) - 1) :
 
 # make a staff symbol
 stmts.append((Name, {'id':9,'val':'staff_symbol'}))
-stmts.append((Line_thickness, {'id':9, 'val':0.1}))
+stmts.append((Line_thickness, {'id':9, 'val':0.5}))
 stmts.append((N_lines, {'id':9,'val':5}))
-stmts.append((Staff_space, {'id':9, 'val':0.5}))
+stmts.append((Staff_space, {'id':9, 'val':1.0}))
 
 # run!
 
@@ -338,6 +359,7 @@ for st in stmts :
 trans.commit()
 
 
+'''
 OUT = {}
 for table in TABLES_TO_REPORT :
   #print "!+"*40
@@ -351,3 +373,27 @@ for table in TABLES_TO_REPORT :
   OUT[table.name] = sub_d
 
 print json.dumps(OUT)
+'''
+
+_HOST_NAME = '' 
+_PORT_NUMBER = 8000
+
+class Engraver(object) :
+  def __init__(self, conn) :
+    self.conn = conn
+  def engrave(self, sql) :
+    result = self.conn.execute(text(sql))
+    out = []
+    for row in result.fetchall() :
+      out.append(list(row))
+    return json.dumps(out)
+
+server_class = simple_http_server.MyServer
+httpd = server_class((_HOST_NAME, _PORT_NUMBER), simple_http_server.MyHandler, engraver=Engraver(conn))
+print time.asctime(), "Server Starts - %s:%s" % (_HOST_NAME, _PORT_NUMBER)
+try:
+  httpd.serve_forever()
+except KeyboardInterrupt:
+  pass
+httpd.server_close()
+print time.asctime(), "Server Stops - %s:%s" % (_HOST_NAME, _PORT_NUMBER)

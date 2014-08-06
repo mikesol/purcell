@@ -5,25 +5,35 @@ import emmentaler_tools
 
 # need to find a way to work font size into this...
 
+def initialize_dimensions_of_quarter_note(glyph_box, rhythmic_event_dimension, dimension) :
+  duration_log_to_rhythmic_event_dimensions = select([
+    literal(-101).label('id'),
+    from_ft_20_6(glyph_box.c[dimension]).label('val')
+  ]).where(
+           and_(glyph_box.c.name == "emmentaler-20",
+                glyph_box.c.idx == 157)).\
+  cte(name='duration_initializer')
+  return simple_insert(rhythmic_event_dimension, duration_log_to_rhythmic_event_dimensions)
+
 class _Delete(DeleteStmt) :
-  def __init__(self, rhythmic_event_width) :
+  def __init__(self, rhythmic_event_dimension) :
     def where_clause_fn(id) :
-      return rhythmic_event_width.c.id == id
-    DeleteStmt.__init__(self, rhythmic_event_width, where_clause_fn)
+      return rhythmic_event_dimension.c.id == id
+    DeleteStmt.__init__(self, rhythmic_event_dimension, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, font_name, font_size, duration_log, glyph_box, name, rhythmic_event_width) :
+  def __init__(self, font_name, font_size, duration_log, glyph_box, name, rhythmic_event_dimension, dimension) :
     InsertStmt.__init__(self)
 
-    duration_log_to_rhythmic_event_widths = select([
+    duration_log_to_rhythmic_event_dimensions = select([
       duration_log.c.id.label('id'),
-      (from_ft_20_6(glyph_box.c.width) * font_size.c.val / 20.0).label('val')
+      (from_ft_20_6(glyph_box.c[dimension]) * font_size.c.val / 20.0).label('val')
     ]).select_from(duration_log.join(font_name, onclause = duration_log.c.id == font_name.c.id).\
                    join(name, onclause = duration_log.c.id == name.c.id).\
                    join(font_size, onclause = duration_log.c.id == font_size.c.id).\
                    join(glyph_box, onclause = font_name.c.val == glyph_box.c.name)).where(
-             and_(glyph_box.c.idx == case([(and_(duration_log.c.val == -1, name.c.val == 'note'), 148),
-                                            (and_(duration_log.c.val == 0, name.c.val == 'note'), 147),
+             and_(glyph_box.c.idx == case([(and_(duration_log.c.val == -1, name.c.val == 'note'), 156),
+                                            (and_(duration_log.c.val == 0, name.c.val == 'note'), 155),
                                             (and_(duration_log.c.val == 0, name.c.val == 'rest'), 3),
                                             (and_(duration_log.c.val == -1, name.c.val == 'rest'), 4),
                                             (and_(duration_log.c.val == -2, name.c.val == 'rest'), 9),
@@ -32,24 +42,24 @@ class _Insert(InsertStmt) :
                                             (and_(duration_log.c.val == -5, name.c.val == 'rest'), 13),
                                             (and_(duration_log.c.val == -6, name.c.val == 'rest'), 14),
                                             (and_(duration_log.c.val == -7, name.c.val == 'rest'), 15),
-                                            (name.c.val == 'note', 149)],
+                                            (name.c.val == 'note', 157)],
                                            else_ = 0))).\
-    cte(name='duration_log_to_rhythmic_event_widths')
+    cte(name='duration_log_to_rhythmic_event_dimensions')
 
-    self.register_stmt(duration_log_to_rhythmic_event_widths)
+    self.register_stmt(duration_log_to_rhythmic_event_dimensions)
 
     #uggghhhh....
-    real_duration_log_to_rhythmic_event_widths = realize(duration_log_to_rhythmic_event_widths, rhythmic_event_width, 'val')
+    real_duration_log_to_rhythmic_event_dimensions = realize(duration_log_to_rhythmic_event_dimensions, rhythmic_event_dimension, 'val')
     
-    self.register_stmt(real_duration_log_to_rhythmic_event_widths)
-    self.insert = simple_insert(rhythmic_event_width, real_duration_log_to_rhythmic_event_widths)
+    self.register_stmt(real_duration_log_to_rhythmic_event_dimensions)
+    self.insert = simple_insert(rhythmic_event_dimension, real_duration_log_to_rhythmic_event_dimensions)
 
-def generate_ddl(font_name, font_size, duration_log, glyph_box, name, rhythmic_event_width) :
+def generate_ddl(font_name, font_size, duration_log, glyph_box, name, rhythmic_event_dimension, dimension) :
   OUT = []
 
-  insert_stmt = _Insert(font_name, font_size, duration_log, glyph_box, name, rhythmic_event_width)
+  insert_stmt = _Insert(font_name, font_size, duration_log, glyph_box, name, rhythmic_event_dimension, dimension)
 
-  del_stmt = _Delete(rhythmic_event_width)
+  del_stmt = _Delete(rhythmic_event_dimension)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
@@ -76,7 +86,8 @@ if __name__ == "__main__" :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_width = Rhythmic_event_width))
+                                     rhythmic_event_dimension = Rhythmic_event_width,
+                                     dimension = 'width'))
 
   if not MANUAL_DDL :
     manager.register_ddls(conn, LOG = True)

@@ -1,36 +1,46 @@
 import time
 import BaseHTTPServer
+import json
 
+_HOST_NAME = '' 
+_PORT_NUMBER = 8000
 
-HOST_NAME = '' # !!!REMEMBER TO CHANGE THIS!!!
-PORT_NUMBER = 8000
-
+class MyServer(BaseHTTPServer.HTTPServer) :
+  def __init__(self, *args, **kwargs) :
+    engraver = kwargs['engraver']
+    del kwargs['engraver']
+    BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
+    self.engraver = engraver
 
 class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-    def do_HEAD(s):
-        s.send_response(200)
-        s.send_header("Content-type", "text/html")
-        s.end_headers()
-    def do_GET(s):
-        """Respond to a GET request."""
-        s.send_response(200)
-        s.send_header("Content-type", "text/html")
-        s.end_headers()
-        s.wfile.write("<html><head><title>Title goes here.</title></head>")
-        s.wfile.write("<body><p>This is a test.</p>")
-        # If someone went to "http://something.somewhere.net/foo/bar/",
-        # then s.path equals "/foo/bar/".
-        s.wfile.write("<p>You accessed path: %s</p>" % s.path)
-        s.wfile.write("</body></html>")
+  def do_HEAD(s):
+    s.send_response(200)
+    s.send_header("Content-type", "application/json")
+    s.end_headers()
+  def do_GET(s):
+    s.send_response(400)
+  def do_POST(s) :
+    clen = int(s.headers['Content-length'])
+    content = s.rfile.read(clen)
+    print content
+    s.send_response(200)
+    s.send_header("Content-type", "application/json")
+    s.send_header("Access-Control-Allow-Origin","*")
+    s.end_headers()
+    out = s.server.engraver.engrave(content)
+    s.wfile.write(out)
 
 if __name__ == '__main__':
-    server_class = BaseHTTPServer.HTTPServer
-    httpd = server_class((HOST_NAME, PORT_NUMBER), MyHandler)
-    print time.asctime(), "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER)
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    httpd.server_close()
-    print time.asctime(), "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER)
+  class Engraver(object) :
+    def engrave(self, v) :
+      return v+'bar'
+  server_class = MyServer
+  httpd = server_class((_HOST_NAME, _PORT_NUMBER), MyHandler, engraver=Engraver())
+  print time.asctime(), "Server Starts - %s:%s" % (_HOST_NAME, _PORT_NUMBER)
+  try:
+    httpd.serve_forever()
+  except KeyboardInterrupt:
+    pass
+  httpd.server_close()
+  print time.asctime(), "Server Stops - %s:%s" % (_HOST_NAME, _PORT_NUMBER)
 

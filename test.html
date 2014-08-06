@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Engraving server test
+    </title>
+    <style type="text/css" src="fonts/stylesheet.css"></style>
+    <script src="jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      function s_(v) {
+        return 1.0 * v;
+      }
+      function st_x(v) {
+        return s_(v) + 30;
+      }
+      function st_y(v) {
+        return s_(v) + 30;
+      }
+      function table_to_columns(name) {
+        if (name == "line_stencil") {
+          return "line_stencil.id, line_stencil.x0, line_stencil.y0, line_stencil.x1, line_stencil.y1, line_stencil.thickness";
+        } else if (name == "glyph_stencil") {
+          return "glyph_stencil.id, glyph_stencil.font_name, glyph_stencil.font_size, unicode_to_glyph_index_map.unicode, glyph_stencil.x, glyph_stencil.y";
+        } else if (name == "string_stencil") {
+          return "string_stencil.id, string_stencil.font_name, string_stencil.font_size, string_stencil.str, string_stencil.x, string_stencil.y";
+        }   
+      }
+      function stencil_sql_request(name) {
+        var out = "SELECT " + table_to_columns(name) + ", x_position.val, y_position.val FROM " + name + " LEFT JOIN x_position ON " + name + ".id = x_position.id LEFT JOIN y_position ON " + name + ".id = y_position.id";
+        if (name == "glyph_stencil") {
+          out += " JOIN unicode_to_glyph_index_map ON glyph_stencil.glyph_idx = unicode_to_glyph_index_map.idx"
+        }
+        return out + ";"
+      }
+      function add_to_graphics(table_name, graphics) {
+          $.ajax(
+            {
+              async : false, // ugh...just for testing
+              type : "POST",
+              url : "http://localhost:8000",
+              data : stencil_sql_request(table_name),
+              success:function(data){
+                graphics[table_name] = eval("("+data+")");
+                console.log(eval(data));
+                console.log(graphics[table_name]);
+          }});
+      }
+      function draw() {
+        var canvas = $("#engraving")[0];
+        var graphics = {}
+        add_to_graphics("line_stencil", graphics);
+        add_to_graphics("glyph_stencil", graphics);
+        add_to_graphics("string_stencil", graphics);
+        //console.log(graphics);
+        var context = canvas.getContext('2d');
+        //context.scale(4,4);
+        if (graphics.line_stencil) {
+          for (var i = 0; i < graphics.line_stencil.length; i++) {
+            var line = graphics.line_stencil[i];
+            console.log("making line", line);
+            context.beginPath();
+            var x = line[6] ? line[6] : 0.0;
+            var y = line[7] ? line[7] : 0.0;
+            context.moveTo(st_x(line[1] + x), st_y(line[2] + y));
+            context.lineTo(st_y(line[3] + x), st_y(line[4] + y));
+            context.lineWidth = s_(line[5]);
+            context.stroke();
+          }
+        }
+        if (graphics.glyph_stencil) {
+          for (var i = 0; i < graphics.glyph_stencil.length; i++) {
+            var glyph = graphics.glyph_stencil[i];
+            console.log("making glyph", glyph);
+            var x = glyph[4] + (glyph[6] ? glyph[6] : 0.0);
+            var y = glyph[5] + (glyph[7] ? glyph[7] : 0.0);
+            context.font = 'normal '+glyph[2]+'px '+glyph[1];
+            //context.font = '10px sans-serif'
+            console.log(context.font);
+            //context.fillText(String.fromCharCode(glyph[3]), x, y);
+            //context.fillText(String.fromCharCode(glyph[3]), x * 6, 20);
+            //context.fillText(String.fromCharCode(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29), x * 6,
+            //40);
+            //context.fillText('\ue135',x * 60, 40);
+            context.fillText(glyph[3], st_x(x), st_y(0));
+          }
+        }
+      }
+      $(document).ready(function() {
+        draw();
+      });
+    </script>
+  </head>
+  <body>
+    <canvas id="engraving" width="1000" height="600">
+    </canvas>
+  </body>
+</html>

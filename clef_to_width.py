@@ -78,7 +78,7 @@ if __name__ == "__main__" :
   Score.metadata.drop_all(engine)
   Score.metadata.create_all(engine)
 
-  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
+  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box, from_cache=True)
 
   stmts = []
 

@@ -67,6 +67,7 @@ Font_size = make_table('font_size', Float)
 Glyph_idx = make_table('glyph_idx', Integer)
 
 Rhythmic_event_width = make_table('rhythmic_event_width', Float)
+Rhythmic_event_height = make_table('rhythmic_event_height', Float)
 Dot_width = make_table('dot_width', Float)
 Accidental_width = make_table('accidental_width', Float)
 Left_width = make_table('left_width', Float)
@@ -76,6 +77,7 @@ Height = make_table('height', Float)
 
 Space_prev = make_table('space_prev', Float)
 X_position = make_table('x_position', Float)
+Y_position = make_table('y_position', Float)
 
 Graphical_next = make_table('graphical_next', Integer)
 
