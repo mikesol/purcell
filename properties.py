@@ -37,6 +37,9 @@ Time_signature = make_table('time_signature', Fraction)
 # key signature where +1 is G Major, -4 A-flat major, etc...
 Key_signature = make_table('key_signature', Integer)
 
+# the staff symbol that something is on
+Staff_symbol = make_table('staff_symbol', Integer)
+
 ### derived tables
 
 # the full duration of an event

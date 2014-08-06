@@ -238,6 +238,9 @@ if KEY_SIGNATURE_TO_STENCIL :
                             key_signature = Key_signature, 
                             width = Width,
                             key_signature_layout_info = Key_signature_layout_info,
+                            staff_symbol = Staff_symbol,
+                            staff_space = Staff_space,
+                            rhythmic_event_height = Rhythmic_event_height,
                             glyph_stencil = Glyph_stencil)
 
 ###############################
@@ -349,6 +352,9 @@ stmts.append((Name, {'id':9,'val':'staff_symbol'}))
 stmts.append((Line_thickness, {'id':9, 'val':0.5}))
 stmts.append((N_lines, {'id':9,'val':5}))
 stmts.append((Staff_space, {'id':9, 'val':1.0}))
+
+for x in range(9) :
+  stmts.append((Staff_symbol, {'id':x,'val':9}))
 
 # run!
 

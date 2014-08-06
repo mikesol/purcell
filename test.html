@@ -74,19 +74,33 @@
             var x = glyph[4] + (glyph[6] ? glyph[6] : 0.0);
             var y = glyph[5] + (glyph[7] ? glyph[7] : 0.0);
             context.font = 'normal '+glyph[2]+'px '+glyph[1];
-            //context.font = '10px sans-serif'
             console.log(context.font);
-            //context.fillText(String.fromCharCode(glyph[3]), x, y);
-            //context.fillText(String.fromCharCode(glyph[3]), x * 6, 20);
-            //context.fillText(String.fromCharCode(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29), x * 6,
-            //40);
-            //context.fillText('\ue135',x * 60, 40);
-            context.fillText(glyph[3], st_x(x), st_y(0));
+            context.fillText(glyph[3], st_x(x), st_y(y));
+          }
+        }
+        if (graphics.string_stencil) {
+          for (var i = 0; i < graphics.string_stencil.length; i++) {
+            var str = graphics.string_stencil[i];
+            console.log("making STRING", str);
+            var x = str[4] + (str[6] ? str[6] : 0.0);
+            var y = str[5] + (str[7] ? str[7] : 0.0);
+            context.font = 'normal '+str[2]+'px '+str[1];
+            console.log(context.font, str[3], st_x(x), st_y(y));
+            context.fillText(str[3], st_x(x), st_y(y));
           }
         }
       }
       $(document).ready(function() {
         draw();
+        $.ajax(
+          {
+            async : false, // ugh...just for testing
+            type : "POST",
+            url : "http://localhost:8000",
+            data : "SELECT * FROM space_prev;",
+            success:function(data){
+              console.log("space_prev", data);
+        }});
       });
     </script>
   </head>

@@ -112,6 +112,7 @@ class _Insert(InsertStmt) :
                _TS_NOTE(name_left, name_right, width_left, left_width),
                _NOTE_TS(name_left, name_right, right_width, width_right),
                _TS_KEY(name_left, name_right, width_left, width_right),
+               _KEY_TS(name_left, name_right, width_left, width_right),
                _TS_CLEF(name_left, name_right, width_left, width_right),
                _CLEF_TS(name_left, name_right, width_left, width_right),
                _CLEF_NOTE(name_left, name_right, width_left, left_width),
