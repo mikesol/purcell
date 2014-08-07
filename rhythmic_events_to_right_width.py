@@ -12,17 +12,17 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, right_width, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, glyph_box, rhythmic_event_width, dot_width, rhythmic_event_to_dot_padding, right_width) :
+  def __init__(self, glyph_box, note_head_width, dot_width, rhythmic_event_to_dot_padding, right_width) :
     InsertStmt.__init__(self)
 
     rhythmic_event_to_dot_padding_a = rhythmic_event_to_dot_padding.alias(name='rhythmic_event_to_dot_padding_alias')
 
     rhythmic_event_to_right_widths = select([
-      rhythmic_event_width.c.id.label('id'),
-      (rhythmic_event_width.c.val +\
+      note_head_width.c.id.label('id'),
+      (note_head_width.c.val +\
         case([(dot_width.c.val == None, 0)], else_ = dot_width.c.val) +\
         case([(dot_width.c.val == None, 0), (rhythmic_event_to_dot_padding.c.val == None, rhythmic_event_to_dot_padding_a.c.val)], else_ = rhythmic_event_to_dot_padding.c.val)).label('val')
-    ]).select_from(rhythmic_event_width.outerjoin(dot_width, onclause = rhythmic_event_width.c.id == dot_width.c.id)).\
+    ]).select_from(note_head_width.outerjoin(dot_width, onclause = note_head_width.c.id == dot_width.c.id)).\
        where(rhythmic_event_to_dot_padding_a.c.id == -1).\
     cte(name='rhythmic_event_to_right_widths')
 
@@ -34,16 +34,16 @@ class _Insert(InsertStmt) :
     self.register_stmt(real_rhythmic_event_to_right_widths)
     self.insert = simple_insert(right_width, real_rhythmic_event_to_right_widths)
 
-def generate_ddl(glyph_box, rhythmic_event_width, dot_width, rhythmic_event_to_dot_padding, right_width) :
+def generate_ddl(glyph_box, note_head_width, dot_width, rhythmic_event_to_dot_padding, right_width) :
   OUT = []
 
-  insert_stmt = _Insert(glyph_box, rhythmic_event_width, dot_width, rhythmic_event_to_dot_padding, right_width)
+  insert_stmt = _Insert(glyph_box, note_head_width, dot_width, rhythmic_event_to_dot_padding, right_width)
 
   del_stmt = _Delete(right_width)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [rhythmic_event_width, dot_width, rhythmic_event_to_dot_padding]]
+     for table in [note_head_width, dot_width, rhythmic_event_to_dot_padding]]
 
   return OUT
 
@@ -62,7 +62,7 @@ if __name__ == "__main__" :
   generate_sqlite_functions(conn)
 
   manager = DDL_manager(generate_ddl(glyph_box = Glyph_box,
-                                     rhythmic_event_width = Rhythmic_event_width,
+                                     note_head_width = Note_head_width,
                                      dot_width = Dot_width,
                                      rhythmic_event_to_dot_padding = Rhythmic_event_to_dot_padding,
                                      right_width = Right_width))
@@ -87,7 +87,7 @@ if __name__ == "__main__" :
     stmts.append((Duration_log, {'id':x,'val': DL[x]}))
     stmts.append((Dots, {'id':x,'val': DT[x]}))
     stmts.append((Dot_width, {'id':x,'val': W[x]}))
-    stmts.append((Rhythmic_event_width, {'id':x,'val': N[x]}))
+    stmts.append((Note_head_width, {'id':x,'val': N[x]}))
     stmts.append((Rhythmic_event_to_dot_padding, {'id':x,'val': 0.1}))
 
   trans = conn.begin()

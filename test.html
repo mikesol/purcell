@@ -41,23 +41,24 @@
               data : stencil_sql_request(table_name),
               success:function(data){
                 graphics[table_name] = eval("("+data+")");
-                console.log(eval(data));
-                console.log(graphics[table_name]);
+                //console.log(eval(data));
+                //console.log(graphics[table_name]);
           }});
       }
       function draw() {
         var canvas = $("#engraving")[0];
+        var context = canvas.getContext('2d');
+        context.clearRect(0,0,canvas.width, canvas.height);
         var graphics = {}
         add_to_graphics("line_stencil", graphics);
         add_to_graphics("glyph_stencil", graphics);
         add_to_graphics("string_stencil", graphics);
         //console.log(graphics);
-        var context = canvas.getContext('2d');
         //context.scale(4,4);
         if (graphics.line_stencil) {
           for (var i = 0; i < graphics.line_stencil.length; i++) {
             var line = graphics.line_stencil[i];
-            console.log("making line", line);
+            //console.log("making line", line);
             context.beginPath();
             var x = line[6] ? line[6] : 0.0;
             var y = line[7] ? line[7] : 0.0;
@@ -70,42 +71,76 @@
         if (graphics.glyph_stencil) {
           for (var i = 0; i < graphics.glyph_stencil.length; i++) {
             var glyph = graphics.glyph_stencil[i];
-            console.log("making glyph", glyph);
+            //console.log("making glyph", glyph);
             var x = glyph[4] + (glyph[6] ? glyph[6] : 0.0);
             var y = glyph[5] + (glyph[7] ? glyph[7] : 0.0);
             context.font = 'normal '+glyph[2]+'px '+glyph[1];
-            console.log(context.font);
+            //console.log(context.font);
             context.fillText(glyph[3], st_x(x), st_y(y));
           }
         }
         if (graphics.string_stencil) {
           for (var i = 0; i < graphics.string_stencil.length; i++) {
             var str = graphics.string_stencil[i];
-            console.log("making STRING", str);
+            //console.log("making STRING", str);
             var x = str[4] + (str[6] ? str[6] : 0.0);
             var y = str[5] + (str[7] ? str[7] : 0.0);
             context.font = 'normal '+str[2]+'px '+str[1];
-            console.log(context.font, str[3], st_x(x), st_y(y));
+            //console.log(context.font, str[3], st_x(x), st_y(y));
             context.fillText(str[3], st_x(x), st_y(y));
           }
         }
       }
+      var GLOBAL_NOTE_ADD_KLUDGE = 10;
+      var PREV = 8;
+      function build_simple_query(queries) {
+        out = ""
+        for (var i = 0; i < queries.length; i++) {
+          out += "INSERT INTO "+queries[i][0]+" VALUES ("+queries[i][1]+","+queries[i][2]+");\n";
+        }
+        return out;
+      }
+      function addNote() {
+          var query = "DELETE FROM time_next WHERE time_next.id = "+PREV+";";
+          query = query + "INSERT INTO time_next VALUES("+PREV+","+GLOBAL_NOTE_ADD_KLUDGE+");";
+          query = query + "INSERT INTO time_next VALUES("+GLOBAL_NOTE_ADD_KLUDGE+", NULL);";
+          query = query + build_simple_query([['name', GLOBAL_NOTE_ADD_KLUDGE, "'note'"],
+                ['font_name', GLOBAL_NOTE_ADD_KLUDGE, "'emmentaler-20'"],
+                ['font_size', GLOBAL_NOTE_ADD_KLUDGE, 20],
+                ['duration_log', GLOBAL_NOTE_ADD_KLUDGE, -3],
+                ['staff_symbol', GLOBAL_NOTE_ADD_KLUDGE, 9]
+              ]);
+          $.ajax(
+            {
+              async : false, // ugh...just for testing
+              type : "POST",
+              url : "http://localhost:8000",
+              data : query,
+              success:function(data){
+                console.log("success adding note!");
+              }});
+        PREV = GLOBAL_NOTE_ADD_KLUDGE;
+        GLOBAL_NOTE_ADD_KLUDGE += 1;
+        draw();
+      }
       $(document).ready(function() {
         draw();
+        // showing to mirkku - delete me
         $.ajax(
           {
             async : false, // ugh...just for testing
             type : "POST",
             url : "http://localhost:8000",
-            data : "SELECT * FROM space_prev;",
-            success:function(data){
-              console.log("space_prev", data);
-        }});
+            data : "SELECT staff_position.val, x_position.val FROM staff_position, name, x_position WHERE staff_position.id = name.id AND name.val = 'clef' AND name.id = x_position.id;",
+            success:function(data) {
+              console.log("mirkku - here's the info", data);
+            }});
       });
     </script>
   </head>
   <body>
-    <canvas id="engraving" width="1000" height="600">
+    <canvas id="engraving" width="1000" height="300">
     </canvas>
+    <div onclick="addNote()">click on me to add a note</div>
   </body>
 </html>

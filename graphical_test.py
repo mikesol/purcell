@@ -1,6 +1,7 @@
 import tuplet_to_factor
 import rhythmic_events_to_durations
 import clef_to_width
+import clef_to_y_position
 import key_signature_to_width
 import time_signature_to_width
 import time_signature_to_height
@@ -20,13 +21,14 @@ import key_signature_to_stencil
 import duration_log_to_stencil
 
 import emmentaler_tools
-import key_signature_tools
 import simple_http_server
 
 from plain import *
 from properties import *
 from sqlalchemy import create_engine
 from sqlalchemy import event, DDL, text
+
+from sqlalchemy.exc import ResourceClosedError
 
 import json
 import time
@@ -47,6 +49,7 @@ F = False
 TUPLET_TO_FACTOR = T
 RHYTHMIC_EVENTS_TO_DURATIONS = T
 CLEF_TO_WIDTH = T
+CLEF_TO_Y_POSITION = T
 KEY_SIGNATURE_TO_WIDTH = T
 TIME_SIGNATURE_TO_WIDTH = T
 TIME_SIGNATURE_TO_HEIGHT = T
@@ -98,6 +101,14 @@ if KEY_SIGNATURE_TO_WIDTH :
                                      glyph_box = Glyph_box,
                                      width = Width)
 
+if CLEF_TO_Y_POSITION :
+  manager.ddls += clef_to_y_position.generate_ddl(name = Name,
+                                     staff_position = Staff_position,
+                                     staff_symbol = Staff_symbol,
+                                     staff_space = Staff_space,
+                                     note_head_height = Note_head_height, 
+                                     y_position = Y_position)
+
 ###############################
 if CLEF_TO_WIDTH : 
   manager.ddls += clef_to_width.generate_ddl(name = Name,
@@ -141,7 +152,7 @@ if DURATION_LOG_TO_WIDTH :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_dimension = Rhythmic_event_width,
+                                     rhythmic_event_dimension = Note_head_width,
                                      dimension = 'width')
 
 ################################
@@ -151,7 +162,7 @@ if DURATION_LOG_TO_HEIGHT :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_dimension = Rhythmic_event_height,
+                                     rhythmic_event_dimension = Note_head_height,
                                      dimension = 'height')
 
 ###############################
@@ -167,7 +178,7 @@ if DOTS_TO_WIDTH :
 ###############################
 if RHYTHMIC_EVENTS_TO_RIGHT_WIDTH :
   manager.ddls += rhythmic_events_to_right_width.generate_ddl(glyph_box = Glyph_box,
-                                     rhythmic_event_width = Rhythmic_event_width,
+                                     note_head_width = Note_head_width,
                                      dot_width = Dot_width,
                                      rhythmic_event_to_dot_padding = Rhythmic_event_to_dot_padding,
                                      right_width = Right_width)
@@ -175,7 +186,7 @@ if RHYTHMIC_EVENTS_TO_RIGHT_WIDTH :
 ###############################
 if RHYTHMIC_EVENTS_TO_LEFT_WIDTH :
   manager.ddls += rhythmic_events_to_left_width.generate_ddl(glyph_box = Glyph_box,
-                                     rhythmic_event_width = Rhythmic_event_width,
+                                     note_head_width = Note_head_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
                                      left_width = Left_width)
@@ -218,7 +229,9 @@ if TIME_SIGNATURE_TO_STENCIL :
                                      time_signature = Time_signature,
                                      string_box = String_box,
                                      width = Width,
-                                     height = Height,
+                                     staff_symbol = Staff_symbol,
+                                     staff_space = Staff_space,
+                                     note_head_height = Note_head_height,
                                      stencil = String_stencil)
 ###############################
 if STAFF_SYMBOL_TO_STENCIL :
@@ -227,7 +240,7 @@ if STAFF_SYMBOL_TO_STENCIL :
                                      n_lines = N_lines,
                                      staff_space = Staff_space,
                                      x_position = X_position,
-                                     rhythmic_event_height = Rhythmic_event_height,
+                                     note_head_height = Note_head_height,
                                      line_stencil = Line_stencil)
 
 ###############################
@@ -240,7 +253,7 @@ if KEY_SIGNATURE_TO_STENCIL :
                             key_signature_layout_info = Key_signature_layout_info,
                             staff_symbol = Staff_symbol,
                             staff_space = Staff_space,
-                            rhythmic_event_height = Rhythmic_event_height,
+                            note_head_height = Note_head_height,
                             glyph_stencil = Glyph_stencil)
 
 ###############################
@@ -261,9 +274,8 @@ emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
 emmentaler_tools.unicode_to_glyph_index_map(conn, Unicode_to_glyph_index_map)
 emmentaler_tools.add_to_string_box_table(conn, String_box, '3')
 emmentaler_tools.add_to_string_box_table(conn, String_box, '4')
-key_signature_tools.populate_key_signature_info_table(conn, Key_signature_layout_info)
-conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Rhythmic_event_width, 'width'))
-conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Rhythmic_event_height, 'height'))
+conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_width, 'width'))
+conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_height, 'height'))
 
 stmts = []
 
@@ -295,7 +307,8 @@ stmts.append((Key_signature, {'id':1,'val':2}))
 stmts.append((Name, {'id':2,'val':'clef'}))
 stmts.append((Font_name, {'id':2,'val':'emmentaler-20'}))
 stmts.append((Font_size, {'id':2,'val':20}))
-stmts.append((Glyph_idx, {'id':2,'val':116}))
+stmts.append((Glyph_idx, {'id':2,'val':118}))
+stmts.append((Staff_position, {'id':2,'val':-1.0}))
 
 # some notes and rests
 stmts.append((Name, {'id':3,'val':'note'}))
@@ -321,6 +334,7 @@ stmts.append((Name, {'id':6,'val':'clef'}))
 stmts.append((Font_name, {'id':6,'val':'emmentaler-20'}))
 stmts.append((Font_size, {'id':6,'val':20}))
 stmts.append((Glyph_idx, {'id':6,'val':116}))
+stmts.append((Staff_position, {'id':6,'val':1.0}))
 
 # some notes and rests
 stmts.append((Name, {'id':7,'val':'note'}))
@@ -388,10 +402,15 @@ class Engraver(object) :
   def __init__(self, conn) :
     self.conn = conn
   def engrave(self, sql) :
-    result = self.conn.execute(text(sql))
     out = []
-    for row in result.fetchall() :
-      out.append(list(row))
+    sql = sql.split(";")
+    for stmt in sql :
+      result = self.conn.execute(text(stmt+";"))
+      try :
+        for row in result.fetchall() :
+          out.append(list(row))    
+      except ResourceClosedError as e :
+        print stmt, "does not return rows, blocking error"
     return json.dumps(out)
 
 server_class = simple_http_server.MyServer

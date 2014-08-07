@@ -90,14 +90,14 @@ manager.ddls += dots_to_width.generate_ddl(font_name = Font_name,
 
 ###############################
 manager.ddls += rhythmic_events_to_right_width.generate_ddl(glyph_box = Glyph_box,
-                                     rhythmic_event_width = Rhythmic_event_width,
+                                     note_head_width = Note_head_width,
                                      dot_width = Dot_width,
                                      rhythmic_event_to_dot_padding = Rhythmic_event_to_dot_padding,
                                      right_width = Right_width)
 
 ###############################
 manager.ddls += rhythmic_events_to_left_width.generate_ddl(glyph_box = Glyph_box,
-                                     rhythmic_event_width = Rhythmic_event_width,
+                                     note_head_width = Note_head_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
                                      left_width = Left_width)

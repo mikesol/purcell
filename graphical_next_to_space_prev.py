@@ -36,14 +36,14 @@ def _NOTE_TS(name_left, name_right, right_width, width_right) :
   return (and_(_is_rhythmic_event(name_left), name_right.c.val == 'time_signature'), val + right_width.c.val)
 
 def _TS_KEY(name_left, name_right, width_left, width_right) :
-  return (and_(name_left.c.val == 'time_signature', name_right.c.val == 'key_signature'), 2.0 + width_left.c.val)
+  return (and_(name_left.c.val == 'time_signature', name_right.c.val == 'key_signature'), 3.0 + width_left.c.val)
 def _KEY_TS(name_left, name_right, width_left, width_right) :
-  return (and_(name_left.c.val == 'key_signature', name_right.c.val == 'time_signature'), 2.0 + width_left.c.val)
+  return (and_(name_left.c.val == 'key_signature', name_right.c.val == 'time_signature'), 3.0 + width_left.c.val)
 
 def _TS_CLEF(name_left, name_right, width_left, width_right) :
-  return (and_(name_left.c.val == 'time_signature', name_right.c.val == 'clef'), 2.0 + width_left.c.val)
+  return (and_(name_left.c.val == 'time_signature', name_right.c.val == 'clef'), 3.0 + width_left.c.val)
 def _CLEF_TS(name_left, name_right, width_left, width_right) :
-  return (and_(name_left.c.val == 'clef', name_right.c.val == 'time_signature'), 2.0 + width_left.c.val)
+  return (and_(name_left.c.val == 'clef', name_right.c.val == 'time_signature'), 3.0 + width_left.c.val)
 
 def _CLEF_NOTE(name_left, name_right, width_left, left_width) :
   val = sql_min_max([4.0, left_width.c.val + 1.0], True)
@@ -53,9 +53,9 @@ def _NOTE_CLEF(name_left, name_right, right_width, width_right) :
   return (and_(_is_rhythmic_event(name_left), name_right.c.val == 'clef'), val + right_width.c.val)
 
 def _CLEF_KEY(name_left, name_right, width_left, width_right) :
-  return (and_(name_left.c.val == 'clef', name_right.c.val == 'key_signature'), 2.0 + width_left.c.val)
+  return (and_(name_left.c.val == 'clef', name_right.c.val == 'key_signature'), 3.0 + width_left.c.val)
 def _KEY_CLEF(name_left, name_right, width_left, width_right) :
-  return (and_(name_left.c.val == 'key_signature', name_right.c.val == 'clef'), 2.0 + width_left.c.val)
+  return (and_(name_left.c.val == 'key_signature', name_right.c.val == 'clef'), 3.0 + width_left.c.val)
 
 def _KEY_NOTE(name_left, name_right, width_left, left_width) :
   val = sql_min_max([4.0, left_width.c.val + 1.0], True)

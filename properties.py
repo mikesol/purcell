@@ -40,6 +40,9 @@ Key_signature = make_table('key_signature', Integer)
 # the staff symbol that something is on
 Staff_symbol = make_table('staff_symbol', Integer)
 
+# position of object on staff
+Staff_position = make_table('staff_position', Float)
+
 ### derived tables
 
 # the full duration of an event
@@ -69,8 +72,8 @@ Font_name = make_table('font_name', String)
 Font_size = make_table('font_size', Float)
 Glyph_idx = make_table('glyph_idx', Integer)
 
-Rhythmic_event_width = make_table('rhythmic_event_width', Float)
-Rhythmic_event_height = make_table('rhythmic_event_height', Float)
+Note_head_width = make_table('note_head_width', Float)
+Note_head_height = make_table('note_head_height', Float)
 Dot_width = make_table('dot_width', Float)
 Accidental_width = make_table('accidental_width', Float)
 Left_width = make_table('left_width', Float)

@@ -429,5 +429,5 @@ def sql_min_max(l, MAX=False) :
   OUT = [(L[x], l[x]) for x in range(len(L))]
   return case(OUT, else_ = None)
 
-def staff_spaceize(table, staff_symbol, staff_space, rhythmic_event_height) :
-  return and_(table.c.id == staff_symbol.c.id, staff_symbol.c.val == staff_space.c.id, rhythmic_event_height.c.id == -101)
+def staff_spaceize(table, staff_symbol, staff_space, note_head_height) :
+  return and_(table.c.id == staff_symbol.c.id, staff_symbol.c.val == staff_space.c.id, note_head_height.c.id == -101)

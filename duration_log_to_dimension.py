@@ -86,7 +86,7 @@ if __name__ == "__main__" :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_dimension = Rhythmic_event_width,
+                                     rhythmic_event_dimension = Note_head_width,
                                      dimension = 'width'))
 
   if not MANUAL_DDL :
@@ -115,7 +115,7 @@ if __name__ == "__main__" :
   trans.commit()
 
   NOW = time.time()
-  for row in conn.execute(select([Rhythmic_event_width])).fetchall() :
+  for row in conn.execute(select([Note_head_width])).fetchall() :
     print row
   
   #manager.update(conn, Duration, {'num':100, 'den':1}, Duration.c.id == 4, MANUAL_DDL)

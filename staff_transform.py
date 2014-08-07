@@ -1,3 +1,4 @@
+# deprecated
 
 def populate_key_signature_info_table(conn, table) :
   # 2.0 * m + b = 0.0
@@ -10,3 +11,6 @@ def populate_key_signature_info_table(conn, table) :
   INFO = [(elt[0] * -1 + 2, elt[1]) for elt in INFO]
   for elt in INFO :
     conn.execute(table.insert().values(accidental=elt[1],place=elt[0]))
+
+def staff_transform(v) :
+  return (v * -1.0) + 2.0

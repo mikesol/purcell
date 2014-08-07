@@ -4,6 +4,7 @@ import time
 import key_signature_tools
 import emmentaler_tools
 import duration_log_to_dimension
+from staff_transform import staff_transform
 
 class _Delete(DeleteStmt) :
   #def __init__(self, glyph_stencil, name) :
@@ -17,8 +18,11 @@ class _Delete(DeleteStmt) :
       return exists(stmt)
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
+def _wind_inside_staff(v) :
+  return case([(v > 2.0, v - 3.5)],else_=v)
+
 class _Insert(InsertStmt) :
-  def __init__(self, name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, rhythmic_event_height, glyph_stencil) :
+  def __init__(self, name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, note_head_height, glyph_stencil) :
     InsertStmt.__init__(self)
 
     key_signature_to_stencil_head = select([
@@ -26,20 +30,18 @@ class _Insert(InsertStmt) :
       literal(0).label('sub_id'),
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
-      case([(key_signature.c.val > 0,  21)
-        ], else_ = 28).label('glyph_idx'),
+      case([(key_signature.c.val > 0,  16)
+        ], else_ = 29).label('glyph_idx'),
       literal(0).label('x'),
-      (key_signature_layout_info.c.place * staff_space.c.val * rhythmic_event_height.c.val).label('y'),
+      case([(key_signature.c.val > 0, 2.0)],else_=0.0).label('y'),
     ]).select_from(name.outerjoin(glyph_stencil, onclause=name.c.id == glyph_stencil.c.id)).\
-          where(and_(key_signature_layout_info.c.accidental ==\
-                    case([(key_signature.c.val > 0, 1)], else_=-1),
+          where(and_(
                   name.c.val == 'key_signature',
                   glyph_stencil.c.sub_id == None,
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == key_signature.c.id,
                   key_signature.c.val != 0)).\
-         where(staff_spaceize(key_signature, staff_symbol, staff_space, rhythmic_event_height)).\
          cte(name="key_signature_to_stencil", recursive=True)
 
     self.register_stmt(key_signature_to_stencil_head)
@@ -47,6 +49,7 @@ class _Insert(InsertStmt) :
     key_signature_to_stencil_prev = key_signature_to_stencil_head.\
          alias(name="key_signature_to_stencil_prev")
 
+    # ugh, need to fix y placement!!!
     key_signature_to_stencil = key_signature_to_stencil_head.union_all(
       select([
         key_signature_to_stencil_prev.c.id,
@@ -56,24 +59,36 @@ class _Insert(InsertStmt) :
         key_signature_to_stencil_prev.c.glyph_idx,
         width.c.val * (key_signature_to_stencil_prev.c.sub_id + 1.0) /\
              key_signature.c.val,
-        key_signature_layout_info.c.place * staff_space.c.val * rhythmic_event_height.c.val,
-      ]).where(and_(key_signature_layout_info.c.accidental ==\
-                    (key_signature_to_stencil_prev.c.sub_id + 2) *\
-                      case([(key_signature.c.val > 0, 1)], else_=-1),
+        _wind_inside_staff(key_signature_to_stencil_prev.c.y + case([(key_signature.c.val > 0, 2.0)],else_=1.5))
+      ]).where(and_(
                   width.c.id == key_signature_to_stencil_prev.c.id,
                   key_signature_to_stencil_prev.c.sub_id + 1 < func.abs(key_signature.c.val),
-                  key_signature_to_stencil_prev.c.id == key_signature.c.id)).\
-      where(staff_spaceize(key_signature_to_stencil_prev, staff_symbol, staff_space, rhythmic_event_height)))
+                  key_signature_to_stencil_prev.c.id == key_signature.c.id)))
+      
 
 
     self.register_stmt(key_signature_to_stencil)
 
+    key_signature_to_stencil = select([
+      key_signature_to_stencil.c.id.label('id'),
+      key_signature_to_stencil.c.sub_id.label('sub_id'),
+      key_signature_to_stencil.c.font_name.label('font_name'),
+      key_signature_to_stencil.c.font_size.label('font_size'),
+      key_signature_to_stencil.c.glyph_idx.label('glyph_idx'),
+      key_signature_to_stencil.c.x.label('x'),
+      # normalize from the top of the staff
+      staff_transform(key_signature_to_stencil.c.y.label('y')) * staff_space.c.val * note_head_height.c.val
+      #key_signature_to_stencil.c.y.label('y') * staff_space.c.val * note_head_height.c.val
+      #key_signature_to_stencil.c.y.label('y'),# * staff_space.c.val * note_head_height.c.val
+    ]).where(staff_spaceize(key_signature_to_stencil, staff_symbol, staff_space, note_head_height)).\
+    cte(name="key_signature_to_stencil_normalized_for_staff_space")
+
     self.insert = simple_insert(glyph_stencil, key_signature_to_stencil)
 
-def generate_ddl(name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, rhythmic_event_height, glyph_stencil) :
+def generate_ddl(name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, note_head_height, glyph_stencil) :
   OUT = []
 
-  insert_stmt = _Insert(name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, rhythmic_event_height, glyph_stencil)
+  insert_stmt = _Insert(name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, note_head_height, glyph_stencil)
 
   del_stmt = _Delete(name, glyph_stencil)
 
@@ -105,7 +120,7 @@ if __name__ == "__main__" :
                             key_signature_layout_info = Key_signature_layout_info,
                             staff_symbol = Staff_symbol,
                             staff_space = Staff_space,
-                            rhythmic_event_height = Rhythmic_event_height,
+                            note_head_height = Note_head_height,
                             glyph_stencil = Glyph_stencil))
 
   if not MANUAL_DDL :
@@ -115,8 +130,8 @@ if __name__ == "__main__" :
   Score.metadata.create_all(engine)
 
   emmentaler_tools.populate_glyph_box_table(conn, Glyph_box, from_cache=True)
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Rhythmic_event_width, 'width'))
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Rhythmic_event_height, 'height'))
+  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_width, 'width'))
+  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_height, 'height'))
   key_signature_tools.populate_key_signature_info_table(conn, Key_signature_layout_info)
 
   stmts = []

@@ -14,17 +14,17 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, left_width, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
+  def __init__(self, glyph_box, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
     InsertStmt.__init__(self)
 
     rhythmic_event_to_accidental_padding_a = rhythmic_event_to_accidental_padding.alias(name='rhythmic_event_to_accidental_padding_alias')
 
     rhythmic_event_to_left_widths = select([
-      rhythmic_event_width.c.id.label('id'),
-      (rhythmic_event_width.c.val +\
+      note_head_width.c.id.label('id'),
+      (note_head_width.c.val +\
         case([(accidental_width.c.val == None, 0)], else_ = accidental_width.c.val) +\
         case([(accidental_width.c.val == None, 0), (rhythmic_event_to_accidental_padding.c.val == None, rhythmic_event_to_accidental_padding_a.c.val)], else_ = rhythmic_event_to_accidental_padding.c.val)).label('val')
-    ]).select_from(rhythmic_event_width.outerjoin(accidental_width, onclause = rhythmic_event_width.c.id == accidental_width.c.id)).\
+    ]).select_from(note_head_width.outerjoin(accidental_width, onclause = note_head_width.c.id == accidental_width.c.id)).\
        where(rhythmic_event_to_accidental_padding_a.c.id == -1).\
     cte(name='rhythmic_event_to_left_widths')
 
@@ -36,16 +36,16 @@ class _Insert(InsertStmt) :
     self.register_stmt(real_rhythmic_event_to_left_widths)
     self.insert = simple_insert(left_width, real_rhythmic_event_to_left_widths)
 
-def generate_ddl(glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
+def generate_ddl(glyph_box, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
   OUT = []
 
-  insert_stmt = _Insert(glyph_box, rhythmic_event_width, accidental_width, rhythmic_event_to_accidental_padding, left_width)
+  insert_stmt = _Insert(glyph_box, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width)
 
   del_stmt = _Delete(left_width)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [rhythmic_event_width, accidental_width]]
+     for table in [note_head_width, accidental_width]]
 
   return OUT
 
@@ -64,7 +64,7 @@ if __name__ == "__main__" :
   generate_sqlite_functions(conn)
 
   manager = DDL_manager(generate_ddl(glyph_box = Glyph_box,
-                                     rhythmic_event_width = Rhythmic_event_width,
+                                     note_head_width = Note_head_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
                                      left_width = Left_width))
@@ -87,7 +87,7 @@ if __name__ == "__main__" :
   N = [0.6, 0.2, 0.1, 5.0, 0.3]
   for x in range(len(DL)) :
     stmts.append((Accidental_width, {'id':x,'val': W[x]}))
-    stmts.append((Rhythmic_event_width, {'id':x,'val': N[x]}))
+    stmts.append((Note_head_width, {'id':x,'val': N[x]}))
     stmts.append((Rhythmic_event_to_accidental_padding, {'id':x,'val': 0.1}))
 
   trans = conn.begin()
