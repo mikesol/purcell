@@ -403,14 +403,20 @@ class Engraver(object) :
     self.conn = conn
   def engrave(self, sql) :
     out = []
+    group_transactions = ('INSERT' in sql) | ('UPDATE' in sql) | ('DELETE' in sql)
     sql = sql.split(";")
+    trans = None
+    if group_transactions :
+      trans = conn.begin()
     for stmt in sql :
       result = self.conn.execute(text(stmt+";"))
       try :
         for row in result.fetchall() :
-          out.append(list(row))    
+          out.append(list(row))
       except ResourceClosedError as e :
         print stmt, "does not return rows, blocking error"
+    if group_transactions :
+      trans.commit()
     return json.dumps(out)
 
 server_class = simple_http_server.MyServer

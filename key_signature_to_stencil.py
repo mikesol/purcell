@@ -1,7 +1,6 @@
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from plain import *
 import time
-import key_signature_tools
 import emmentaler_tools
 import duration_log_to_dimension
 from staff_transform import staff_transform

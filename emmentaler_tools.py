@@ -23,7 +23,7 @@ def populate_glyph_box_table(conn, table, from_cache = False, make_cache = False
         CACHE.append({'name' : "emmentaler-20", 'idx' : x, 'x' : xMin, 'width' : xMax - xMin, 'y' : yMin, 'height' : yMax - yMin})
         x += 1
       except FT_Exception as e :
-        print e
+        print e, "at an X of", x, "when counting glyphs in the emmentaler font"
         break  
   else :
     emmentaler_cache = file('emmentaler-cache.txt', 'r')
@@ -44,8 +44,7 @@ def populate_glyph_box_table(conn, table, from_cache = False, make_cache = False
     emmentaler_cache.close()
 
 def add_to_string_box_table(conn, table, gnirts) :
-  #face = freetype.Face("/Users/mikesolomon/Library/Fonts/emmentaler-20.otf")
-  face = freetype.Face("/home/mirjam/.fonts/emmentaler-20.otf")
+  face = freetype.Face("fonts/emmentaler-20.otf")
   face.set_char_size( 20 << 6 )
   x = 0
   xMin = 0

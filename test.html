@@ -39,11 +39,10 @@
               type : "POST",
               url : "http://localhost:8000",
               data : stencil_sql_request(table_name),
-              success:function(data){
-                graphics[table_name] = eval("("+data+")");
-                //console.log(eval(data));
-                //console.log(graphics[table_name]);
-          }});
+              success: function(data) {
+                graphics[table_name] = eval(data);
+              }
+           });
       }
       function draw() {
         var canvas = $("#engraving")[0];
@@ -71,7 +70,7 @@
         if (graphics.glyph_stencil) {
           for (var i = 0; i < graphics.glyph_stencil.length; i++) {
             var glyph = graphics.glyph_stencil[i];
-            //console.log("making glyph", glyph);
+            console.log("making glyph", glyph[3].charCodeAt(0));
             var x = glyph[4] + (glyph[6] ? glyph[6] : 0.0);
             var y = glyph[5] + (glyph[7] ? glyph[7] : 0.0);
             context.font = 'normal '+glyph[2]+'px '+glyph[1];
