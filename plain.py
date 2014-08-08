@@ -4,7 +4,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy import func, event, text, DDL
 from sqlalchemy.sql.selectable import Exists
 from sqlalchemy.exc import ResourceClosedError
-from sqlalchemy.sql.elements import BinaryExpression
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
 import string
 import random
 import math
@@ -25,41 +25,18 @@ class Fraction : pass
 class Line : pass
 class Glyph : pass
 class Str : pass
+class Doubly_linked_list : pass
+
+def make_table_generic(name, cols) :
+  return Table(name, _metadata, *cols)
 
 def make_table(name, tp, unique = False) :
   if tp == Fraction :
     # unique not possible
-    return Table(name, _metadata,
-                     Column('id', Integer, primary_key = True),
+    return make_table_generic(name,
+                     [Column('id', Integer, primary_key = True),
                      Column('num', Integer),
-                     Column('den', Integer))
-  if tp == Line :
-    return Table(name, _metadata,
-                     Column('id', Integer, primary_key = True),
-                     Column('sub_id', Integer, primary_key = True),
-                     Column('x0', Float),
-                     Column('y0', Float),
-                     Column('x1', Float),
-                     Column('y1', Float),
-                     Column('thickness', Float))
-  if tp == Glyph :
-    return Table(name, _metadata,
-                     Column('id', Integer, primary_key = True),
-                     Column('sub_id', Integer, primary_key = True),
-                     Column('font_name', String),
-                     Column('font_size', Float),
-                     Column('glyph_idx', String),
-                     Column('x', Float),
-                     Column('y', Float))
-  if tp == Str :
-    return Table(name, _metadata,
-                     Column('id', Integer, primary_key = True),
-                     Column('sub_id', Integer, primary_key = True),
-                     Column('font_name', String),
-                     Column('font_size', Float),
-                     Column('str', String),
-                     Column('x', Float),
-                     Column('y', Float))
+                     Column('den', Integer)])
   return Table(name, _metadata,
                      Column('id', Integer, primary_key = True),
                      Column('val', tp, unique = unique))
@@ -73,7 +50,7 @@ Log_table = Table('log_table', _metadata,
 
 Glyph_box = Table('glyph_box', _metadata,
   Column('name', String, primary_key = True),
-  Column('idx', Integer, primary_key = True),
+  Column('unicode', String, primary_key = True),
   Column('x', Integer),
   Column('y', Integer),
   Column('width', Integer),
@@ -275,7 +252,7 @@ class DeleteStmt(object) :
           where_clause[x] = where_clause[x].replace(self.table.name, "")
           break
       where_clause = '\n'.join(where_clause)
-    elif isinstance(where_clause, BinaryExpression)  :
+    elif isinstance(where_clause, BinaryExpression) or isinstance(where_clause, BooleanClauseList)  :
       # hideous!!!
       where_clause = str(where_clause.compile(compile_kwargs={"literal_binds": True}))
     if where_clause :
@@ -353,6 +330,8 @@ class DDL_manager(object) :
               ids.append(row[0])
           except ResourceClosedError :
             print "insert from select does not return any rows"
+            #print "here is the statement"
+            #print stmt
         else :
           ids = [stmt.parameters['id']]
       else :
@@ -429,5 +408,5 @@ def sql_min_max(l, MAX=False) :
   OUT = [(L[x], l[x]) for x in range(len(L))]
   return case(OUT, else_ = None)
 
-def staff_spaceize(table, staff_symbol, staff_space, note_head_height) :
-  return and_(table.c.id == staff_symbol.c.id, staff_symbol.c.val == staff_space.c.id, note_head_height.c.id == -101)
+def staff_spaceize(table, staff_symbol, staff_space) :
+  return and_(table.c.id == staff_symbol.c.id, staff_symbol.c.val == staff_space.c.id)

@@ -5,13 +5,19 @@ import time
 # need to find a way to work font size into this...
 
 class _Delete(DeleteStmt) :
-  def __init__(self, glyph_stencil) :
+  #def __init__(self, glyph_stencil, name) :
+  def __init__(self, name, glyph_stencil) :
     def where_clause_fn(id) :
-      return glyph_stencil.c.id == id
+      # we NEED name to be clef
+      # otherwise, we may delete a glyph_stencil after a staff_symbol update
+      # even if the glyph is not based on staff_symbols
+      # so, we localize this just to clefs
+      stmt = select([name.c.id]).where(and_(glyph_stencil.c.id == id, name.c.id == id, name.c.val == 'clef'))
+      return exists(stmt)
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, font_name, font_size, glyph_idx, glyph_stencil) :
+  def __init__(self, name, font_name, font_size, unicode, glyph_stencil) :
     InsertStmt.__init__(self)
 
     clefs_to_stencils = select([
@@ -19,13 +25,13 @@ class _Insert(InsertStmt) :
       literal(0).label('sub_id'),
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
-      glyph_idx.c.val.label('glyph_idx'),
+      unicode.c.val.label('unicode'),
       literal(0).label('x'),
       literal(0).label('y'),
     ]).select_from(name.outerjoin(glyph_stencil, onclause = name.c.id == glyph_stencil.c.id)).where(and_(name.c.val == 'clef',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
-                  name.c.id == glyph_idx.c.id,
+                  name.c.id == unicode.c.id,
                   glyph_stencil.c.sub_id == None
                   )).\
     cte(name='clefs_to_stencils')
@@ -34,16 +40,16 @@ class _Insert(InsertStmt) :
 
     self.insert = simple_insert(glyph_stencil, clefs_to_stencils)
 
-def generate_ddl(name, font_name, font_size, glyph_idx, glyph_stencil) :
+def generate_ddl(name, font_name, font_size, unicode, glyph_stencil) :
   OUT = []
 
-  insert_stmt = _Insert(name, font_name, font_size, glyph_idx, glyph_stencil)
+  insert_stmt = _Insert(name, font_name, font_size, unicode, glyph_stencil)
 
-  del_stmt = _Delete(glyph_stencil)
+  del_stmt = _Delete(name, glyph_stencil)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [name, font_name, font_size, glyph_idx]]
+     for table in [name, font_name, font_size, unicode]]
 
   return OUT
 
@@ -64,7 +70,7 @@ if __name__ == "__main__" :
   manager = DDL_manager(generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
-                                     glyph_idx = Glyph_idx,
+                                     unicode = Unicode,
                                      glyph_stencil = Glyph_stencil))
 
   if not MANUAL_DDL :
@@ -76,9 +82,9 @@ if __name__ == "__main__" :
   stmts = []
 
   stmts.append((Name, {'id':0,'val':'clef'}))
-  stmts.append((Font_name, {'id':0,'val':'emmentaler-20'}))
+  stmts.append((Font_name, {'id':0,'val':'Bravura'}))
   stmts.append((Font_size, {'id':0,'val':20}))
-  stmts.append((Glyph_idx, {'id':0,'val':116}))
+  stmts.append((Unicode, {'id':0,'val':"U+E050"}))
   stmts.append((X_position, {'id':0,'val':1.2}))
 
   trans = conn.begin()

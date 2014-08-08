@@ -1,19 +1,7 @@
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from plain import *
 import time
-import emmentaler_tools
-
-# need to find a way to work font size into this...
-
-def initialize_dimensions_of_quarter_note(glyph_box, rhythmic_event_dimension, dimension) :
-  duration_log_to_rhythmic_event_dimensions = select([
-    literal(-101).label('id'),
-    from_ft_20_6(glyph_box.c[dimension]).label('val')
-  ]).where(
-           and_(glyph_box.c.name == "emmentaler-20",
-                glyph_box.c.idx == 157)).\
-  cte(name='duration_initializer')
-  return simple_insert(rhythmic_event_dimension, duration_log_to_rhythmic_event_dimensions)
+import bravura_tools
 
 class _Delete(DeleteStmt) :
   def __init__(self, rhythmic_event_dimension) :
@@ -27,22 +15,22 @@ class _Insert(InsertStmt) :
 
     duration_log_to_rhythmic_event_dimensions = select([
       duration_log.c.id.label('id'),
-      (from_ft_20_6(glyph_box.c[dimension]) * font_size.c.val / 20.0).label('val')
+      (glyph_box.c[dimension] * font_size.c.val / 20.0).label('val')
     ]).select_from(duration_log.join(font_name, onclause = duration_log.c.id == font_name.c.id).\
                    join(name, onclause = duration_log.c.id == name.c.id).\
                    join(font_size, onclause = duration_log.c.id == font_size.c.id).\
                    join(glyph_box, onclause = font_name.c.val == glyph_box.c.name)).where(
-             and_(glyph_box.c.idx == case([(and_(duration_log.c.val == -1, name.c.val == 'note'), 156),
-                                            (and_(duration_log.c.val == 0, name.c.val == 'note'), 155),
-                                            (and_(duration_log.c.val == 0, name.c.val == 'rest'), 3),
-                                            (and_(duration_log.c.val == -1, name.c.val == 'rest'), 4),
-                                            (and_(duration_log.c.val == -2, name.c.val == 'rest'), 9),
-                                            (and_(duration_log.c.val == -3, name.c.val == 'rest'), 11),
-                                            (and_(duration_log.c.val == -4, name.c.val == 'rest'), 12),
-                                            (and_(duration_log.c.val == -5, name.c.val == 'rest'), 13),
-                                            (and_(duration_log.c.val == -6, name.c.val == 'rest'), 14),
-                                            (and_(duration_log.c.val == -7, name.c.val == 'rest'), 15),
-                                            (name.c.val == 'note', 157)],
+             and_(glyph_box.c.unicode == case([(and_(duration_log.c.val == -1, name.c.val == 'note'), "U+E0A3"),
+                                            (and_(duration_log.c.val == 0, name.c.val == 'note'), "U+E0A2"),
+                                            (and_(duration_log.c.val == 0, name.c.val == 'rest'), "U+E4E3"),
+                                            (and_(duration_log.c.val == -1, name.c.val == 'rest'), "U+E4E4"),
+                                            (and_(duration_log.c.val == -2, name.c.val == 'rest'), "U+E4E5"),
+                                            (and_(duration_log.c.val == -3, name.c.val == 'rest'), "U+E4E6"),
+                                            (and_(duration_log.c.val == -4, name.c.val == 'rest'), "U+E4E7"),
+                                            (and_(duration_log.c.val == -5, name.c.val == 'rest'), "U+E4E8"),
+                                            (and_(duration_log.c.val == -6, name.c.val == 'rest'), "U+E4E9"),
+                                            (and_(duration_log.c.val == -7, name.c.val == 'rest'), "U+E4EA"),
+                                            (name.c.val == 'note', "U+E0A4")],
                                            else_ = 0))).\
     cte(name='duration_log_to_rhythmic_event_dimensions')
 
@@ -89,13 +77,21 @@ if __name__ == "__main__" :
                                      rhythmic_event_dimension = Note_head_width,
                                      dimension = 'width'))
 
+  manager.ddls += generate_ddl(font_name = Font_name,
+                                     font_size = Font_size,
+                                     duration_log = Duration_log,
+                                     glyph_box = Glyph_box,
+                                     name = Name,
+                                     rhythmic_event_dimension = Note_head_height,
+                                     dimension = 'height')
+
   if not MANUAL_DDL :
     manager.register_ddls(conn, LOG = True)
 
   Score.metadata.drop_all(engine)
   Score.metadata.create_all(engine)
 
-  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
+  bravura_tools.populate_glyph_box_table(conn, Glyph_box)
 
   stmts = []
 
@@ -104,7 +100,7 @@ if __name__ == "__main__" :
   for n in range(len(N)) :
     name = N[n]
     for x in range(len(DL)) :
-      stmts.append((Font_name, {'id':x + (len(DL) * n),'val':'emmentaler-20'}))
+      stmts.append((Font_name, {'id':x + (len(DL) * n),'val':'Bravura'}))
       stmts.append((Font_size, {'id':x + (len(DL) * n),'val':20}))
       stmts.append((Duration_log, {'id':x + (len(DL) * n),'val': DL[x]}))
       stmts.append((Name, {'id':x + (len(DL) * n),'val': name}))
@@ -116,6 +112,11 @@ if __name__ == "__main__" :
 
   NOW = time.time()
   for row in conn.execute(select([Note_head_width])).fetchall() :
+    print row
+
+  print "*"*40
+  
+  for row in conn.execute(select([Note_head_height])).fetchall() :
     print row
   
   #manager.update(conn, Duration, {'num':100, 'den':1}, Duration.c.id == 4, MANUAL_DDL)

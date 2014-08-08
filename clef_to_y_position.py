@@ -1,8 +1,7 @@
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from plain import *
 import time
-import emmentaler_tools
-import duration_log_to_dimension
+import bravura_tools
 from staff_transform import staff_transform
 
 # need to find a way to work font size into this...
@@ -15,15 +14,15 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, y_position, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, staff_position, staff_symbol, staff_space, note_head_height, y_position) :
+  def __init__(self, name, staff_position, staff_symbol, staff_space, y_position) :
     InsertStmt.__init__(self)
 
     clefs_to_y_positions = select([
       name.c.id.label('id'),
-      (staff_transform(staff_position.c.val) * staff_space.c.val * note_head_height.c.val).label('val')
+      (staff_transform(staff_position.c.val) * staff_space.c.val).label('val')
     ]).where(and_(name.c.val == 'clef',
                   name.c.id == staff_position.c.id)).\
-       where(staff_spaceize(name, staff_symbol, staff_space, note_head_height)).\
+       where(staff_spaceize(name, staff_symbol, staff_space)).\
     cte(name='clefs_to_y_positions')
 
     self.register_stmt(clefs_to_y_positions)
@@ -34,10 +33,10 @@ class _Insert(InsertStmt) :
     self.register_stmt(real_clefs_to_y_positions)
     self.insert = simple_insert(y_position, real_clefs_to_y_positions)
 
-def generate_ddl(name, staff_position, staff_symbol, staff_space, note_head_height, y_position) :
+def generate_ddl(name, staff_position, staff_symbol, staff_space, y_position) :
   OUT = []
 
-  insert_stmt = _Insert(name, staff_position, staff_symbol, staff_space, note_head_height, y_position)
+  insert_stmt = _Insert(name, staff_position, staff_symbol, staff_space, y_position)
 
   #del_stmt = _Delete(y_position, name)
   del_stmt = _Delete(y_position)
@@ -66,7 +65,6 @@ if __name__ == "__main__" :
                                      staff_position = Staff_position,
                                      staff_symbol = Staff_symbol,
                                      staff_space = Staff_space,
-                                     note_head_height = Note_head_height, 
                                      y_position = Y_position))
 
   if not MANUAL_DDL :
@@ -75,9 +73,7 @@ if __name__ == "__main__" :
   Score.metadata.drop_all(engine)
   Score.metadata.create_all(engine)
 
-  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box, from_cache=True)
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_width, 'width'))
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_height, 'height'))
+  bravura_tools.populate_glyph_box_table(conn, Glyph_box)
 
   stmts = []
 

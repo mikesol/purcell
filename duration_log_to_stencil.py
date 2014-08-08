@@ -19,18 +19,18 @@ class _Insert(InsertStmt) :
       literal(0).label('sub_id'),
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
-      case([(and_(duration_log.c.val == -1, name.c.val == 'note'), 156),
-         (and_(duration_log.c.val == 0, name.c.val == 'note'), 155),
-         (and_(duration_log.c.val == 0, name.c.val == 'rest'), 3),
-         (and_(duration_log.c.val == -1, name.c.val == 'rest'), 4),
-         (and_(duration_log.c.val == -2, name.c.val == 'rest'), 9),
-         (and_(duration_log.c.val == -3, name.c.val == 'rest'), 11),
-         (and_(duration_log.c.val == -4, name.c.val == 'rest'), 12),
-         (and_(duration_log.c.val == -5, name.c.val == 'rest'), 13),
-         (and_(duration_log.c.val == -6, name.c.val == 'rest'), 14),
-         (and_(duration_log.c.val == -7, name.c.val == 'rest'), 15),
-         (name.c.val == 'note', 157)],
-        else_ = 0).label('glyph_idx'),
+      case([(and_(duration_log.c.val == -1, name.c.val == 'note'), "U+E0A3"),
+          (and_(duration_log.c.val == 0, name.c.val == 'note'), "U+E0A2"),
+          (and_(duration_log.c.val == 0, name.c.val == 'rest'), "U+E4E3"),
+          (and_(duration_log.c.val == -1, name.c.val == 'rest'), "U+E4E4"),
+          (and_(duration_log.c.val == -2, name.c.val == 'rest'), "U+E4E5"),
+          (and_(duration_log.c.val == -3, name.c.val == 'rest'), "U+E4E6"),
+          (and_(duration_log.c.val == -4, name.c.val == 'rest'), "U+E4E7"),
+          (and_(duration_log.c.val == -5, name.c.val == 'rest'), "U+E4E8"),
+          (and_(duration_log.c.val == -6, name.c.val == 'rest'), "U+E4E9"),
+          (and_(duration_log.c.val == -7, name.c.val == 'rest'), "U+E4EA"),
+          (name.c.val == 'note', "U+E0A4")],
+         else_ = 0).label('unicode'),
       literal(0).label('x'),
       literal(0).label('y'),
       ######
@@ -91,7 +91,7 @@ if __name__ == "__main__" :
   for n in range(len(N)) :
     name = N[n]
     for x in range(len(DL)) :
-      stmts.append((Font_name, {'id':x + (len(DL) * n),'val':'emmentaler-20'}))
+      stmts.append((Font_name, {'id':x + (len(DL) * n),'val':'Bravura'}))
       stmts.append((Font_size, {'id':x + (len(DL) * n),'val':20}))
       stmts.append((Duration_log, {'id':x + (len(DL) * n),'val': DL[x]}))
       stmts.append((Name, {'id':x + (len(DL) * n),'val': name}))

@@ -8,7 +8,7 @@
     <script src="jquery-1.11.1.min.js" type="text/javascript"></script>
     <script type="text/javascript">
       function s_(v) {
-        return 1.0 * v;
+        return 4.0 * v;
       }
       function st_x(v) {
         return s_(v) + 30;
@@ -20,27 +20,60 @@
         if (name == "line_stencil") {
           return "line_stencil.id, line_stencil.x0, line_stencil.y0, line_stencil.x1, line_stencil.y1, line_stencil.thickness";
         } else if (name == "glyph_stencil") {
-          return "glyph_stencil.id, glyph_stencil.font_name, glyph_stencil.font_size, unicode_to_glyph_index_map.unicode, glyph_stencil.x, glyph_stencil.y";
+          return "glyph_stencil.id, glyph_stencil.font_name, glyph_stencil.font_size, glyph_stencil.unicode, glyph_stencil.x, glyph_stencil.y";
         } else if (name == "string_stencil") {
           return "string_stencil.id, string_stencil.font_name, string_stencil.font_size, string_stencil.str, string_stencil.x, string_stencil.y";
         }   
       }
       function stencil_sql_request(name) {
         var out = "SELECT " + table_to_columns(name) + ", x_position.val, y_position.val FROM " + name + " LEFT JOIN x_position ON " + name + ".id = x_position.id LEFT JOIN y_position ON " + name + ".id = y_position.id";
-        if (name == "glyph_stencil") {
-          out += " JOIN unicode_to_glyph_index_map ON glyph_stencil.glyph_idx = unicode_to_glyph_index_map.idx"
-        }
         return out + ";"
       }
-      function add_to_graphics(table_name, graphics) {
+      function add_to_graphics(table_name, graphics, context) {
           $.ajax(
             {
-              async : false, // ugh...just for testing
+              //async : false, // ugh...just for testing
               type : "POST",
               url : "http://localhost:8000",
               data : stencil_sql_request(table_name),
               success: function(data) {
+                //console.log(table_name, data)
                 graphics[table_name] = eval(data);
+                if (table_name == "line_stencil") {
+                  for (var i = 0; i < graphics.line_stencil.length; i++) {
+                    var line = graphics.line_stencil[i];
+                    //console.log("making line", line);
+                    context.beginPath();
+                    var x = line[6] ? line[6] : 0.0;
+                    var y = line[7] ? line[7] : 0.0;
+                    context.moveTo(st_x(line[1] + x), st_y(line[2] + y));
+                    context.lineTo(st_y(line[3] + x), st_y(line[4] + y));
+                    context.lineWidth = s_(line[5]);
+                    context.stroke();
+                  }
+                }
+                else if (table_name == "glyph_stencil") {
+                  for (var i = 0; i < graphics.glyph_stencil.length; i++) {
+                    var glyph = graphics.glyph_stencil[i];
+                    var x = glyph[4] + (glyph[6] ? glyph[6] : 0.0);
+                    var y = glyph[5] + (glyph[7] ? glyph[7] : 0.0);
+                    context.font = 'normal '+glyph[2]+'px '+glyph[1];
+                    uc = String.fromCharCode(parseInt(glyph[3].substr(2), 16));
+                    //console.log(context.font, glyph[3], uc);
+                    context.fillText(uc, st_x(x), st_y(y));
+                  }
+                }
+                else if (table_name == "string_stencil") {
+                  for (var i = 0; i < graphics.string_stencil.length; i++) {
+                    var str = graphics.string_stencil[i];
+                    //console.log("making STRING", str);
+                    var x = str[4] + (str[6] ? str[6] : 0.0);
+                    var y = str[5] + (str[7] ? str[7] : 0.0);
+                    context.font = 'normal '+str[2]+'px '+str[1];
+                    //console.log(context.font, str[3], st_x(x), st_y(y));
+                    context.fillText(str[3], st_x(x), st_y(y));
+                  }
+                }
               }
            });
       }
@@ -49,48 +82,14 @@
         var context = canvas.getContext('2d');
         context.clearRect(0,0,canvas.width, canvas.height);
         var graphics = {}
-        add_to_graphics("line_stencil", graphics);
-        add_to_graphics("glyph_stencil", graphics);
-        add_to_graphics("string_stencil", graphics);
+        add_to_graphics("line_stencil", graphics, context);
+        add_to_graphics("glyph_stencil", graphics, context);
+        add_to_graphics("string_stencil", graphics, context);
         //console.log(graphics);
         //context.scale(4,4);
-        if (graphics.line_stencil) {
-          for (var i = 0; i < graphics.line_stencil.length; i++) {
-            var line = graphics.line_stencil[i];
-            //console.log("making line", line);
-            context.beginPath();
-            var x = line[6] ? line[6] : 0.0;
-            var y = line[7] ? line[7] : 0.0;
-            context.moveTo(st_x(line[1] + x), st_y(line[2] + y));
-            context.lineTo(st_y(line[3] + x), st_y(line[4] + y));
-            context.lineWidth = s_(line[5]);
-            context.stroke();
-          }
-        }
-        if (graphics.glyph_stencil) {
-          for (var i = 0; i < graphics.glyph_stencil.length; i++) {
-            var glyph = graphics.glyph_stencil[i];
-            console.log("making glyph", glyph[3].charCodeAt(0));
-            var x = glyph[4] + (glyph[6] ? glyph[6] : 0.0);
-            var y = glyph[5] + (glyph[7] ? glyph[7] : 0.0);
-            context.font = 'normal '+glyph[2]+'px '+glyph[1];
-            //console.log(context.font);
-            context.fillText(glyph[3], st_x(x), st_y(y));
-          }
-        }
-        if (graphics.string_stencil) {
-          for (var i = 0; i < graphics.string_stencil.length; i++) {
-            var str = graphics.string_stencil[i];
-            //console.log("making STRING", str);
-            var x = str[4] + (str[6] ? str[6] : 0.0);
-            var y = str[5] + (str[7] ? str[7] : 0.0);
-            context.font = 'normal '+str[2]+'px '+str[1];
-            //console.log(context.font, str[3], st_x(x), st_y(y));
-            context.fillText(str[3], st_x(x), st_y(y));
-          }
-        }
       }
       var GLOBAL_NOTE_ADD_KLUDGE = 10;
+      var PREV_PREV = 7;
       var PREV = 8;
       function build_simple_query(queries) {
         out = ""
@@ -100,34 +99,35 @@
         return out;
       }
       function addNote() {
-          var query = "DELETE FROM time_next WHERE time_next.id = "+PREV+";";
-          query = query + "INSERT INTO time_next VALUES("+PREV+","+GLOBAL_NOTE_ADD_KLUDGE+");";
-          query = query + "INSERT INTO time_next VALUES("+GLOBAL_NOTE_ADD_KLUDGE+", NULL);";
+          var query = "DELETE FROM graphical_next WHERE graphical_next.id = "+PREV+";";
+          query = query + "INSERT INTO graphical_next (id, prev, next) VALUES("+PREV+","+PREV_PREV+","+GLOBAL_NOTE_ADD_KLUDGE+");";
+          query = query + "INSERT INTO graphical_next (id, prev, next) VALUES("+GLOBAL_NOTE_ADD_KLUDGE+","+PREV+",NULL);";
           query = query + build_simple_query([['name', GLOBAL_NOTE_ADD_KLUDGE, "'note'"],
-                ['font_name', GLOBAL_NOTE_ADD_KLUDGE, "'emmentaler-20'"],
+                ['font_name', GLOBAL_NOTE_ADD_KLUDGE, "'Bravura'"],
                 ['font_size', GLOBAL_NOTE_ADD_KLUDGE, 20],
                 ['duration_log', GLOBAL_NOTE_ADD_KLUDGE, -3],
                 ['staff_symbol', GLOBAL_NOTE_ADD_KLUDGE, 9]
               ]);
           $.ajax(
             {
-              async : false, // ugh...just for testing
+              //async : false,
               type : "POST",
               url : "http://localhost:8000",
               data : query,
               success:function(data){
                 console.log("success adding note!");
+                PREV_PREV = PREV;
+                PREV = GLOBAL_NOTE_ADD_KLUDGE;
+                GLOBAL_NOTE_ADD_KLUDGE += 1;
+                draw();
               }});
-        PREV = GLOBAL_NOTE_ADD_KLUDGE;
-        GLOBAL_NOTE_ADD_KLUDGE += 1;
-        draw();
       }
       $(document).ready(function() {
         draw();
         // showing to mirkku - delete me
         $.ajax(
           {
-            async : false, // ugh...just for testing
+            //async : false, // ugh...just for testing
             type : "POST",
             url : "http://localhost:8000",
             data : "SELECT staff_position.val, x_position.val FROM staff_position, name, x_position WHERE staff_position.id = name.id AND name.val = 'clef' AND name.id = x_position.id;",

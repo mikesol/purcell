@@ -1,8 +1,7 @@
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from plain import *
 import time
-import emmentaler_tools
-import duration_log_to_dimension
+import bravura_tools
 from staff_transform import staff_transform
 
 class _Delete(DeleteStmt) :
@@ -21,7 +20,7 @@ def _wind_inside_staff(v) :
   return case([(v > 2.0, v - 3.5)],else_=v)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, note_head_height, glyph_stencil) :
+  def __init__(self, name, font_name, font_size, key_signature, width, staff_symbol, staff_space, glyph_stencil) :
     InsertStmt.__init__(self)
 
     key_signature_to_stencil_head = select([
@@ -29,8 +28,8 @@ class _Insert(InsertStmt) :
       literal(0).label('sub_id'),
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
-      case([(key_signature.c.val > 0,  16)
-        ], else_ = 29).label('glyph_idx'),
+      case([(key_signature.c.val > 0,  "U+E262")
+        ], else_ = "U+E260").label('unicode'),
       literal(0).label('x'),
       case([(key_signature.c.val > 0, 2.0)],else_=0.0).label('y'),
     ]).select_from(name.outerjoin(glyph_stencil, onclause=name.c.id == glyph_stencil.c.id)).\
@@ -55,7 +54,7 @@ class _Insert(InsertStmt) :
         key_signature_to_stencil_prev.c.sub_id + 1,
         key_signature_to_stencil_prev.c.font_name,
         key_signature_to_stencil_prev.c.font_size,
-        key_signature_to_stencil_prev.c.glyph_idx,
+        key_signature_to_stencil_prev.c.unicode,
         width.c.val * (key_signature_to_stencil_prev.c.sub_id + 1.0) /\
              key_signature.c.val,
         _wind_inside_staff(key_signature_to_stencil_prev.c.y + case([(key_signature.c.val > 0, 2.0)],else_=1.5))
@@ -73,21 +72,21 @@ class _Insert(InsertStmt) :
       key_signature_to_stencil.c.sub_id.label('sub_id'),
       key_signature_to_stencil.c.font_name.label('font_name'),
       key_signature_to_stencil.c.font_size.label('font_size'),
-      key_signature_to_stencil.c.glyph_idx.label('glyph_idx'),
+      key_signature_to_stencil.c.unicode.label('unicode'),
       key_signature_to_stencil.c.x.label('x'),
       # normalize from the top of the staff
-      staff_transform(key_signature_to_stencil.c.y.label('y')) * staff_space.c.val * note_head_height.c.val
-      #key_signature_to_stencil.c.y.label('y') * staff_space.c.val * note_head_height.c.val
-      #key_signature_to_stencil.c.y.label('y'),# * staff_space.c.val * note_head_height.c.val
-    ]).where(staff_spaceize(key_signature_to_stencil, staff_symbol, staff_space, note_head_height)).\
+      staff_transform(key_signature_to_stencil.c.y.label('y')) * staff_space.c.val
+      #key_signature_to_stencil.c.y.label('y') * staff_space.c.val
+      #key_signature_to_stencil.c.y.label('y'),# * staff_space.c.val
+    ]).where(staff_spaceize(key_signature_to_stencil, staff_symbol, staff_space)).\
     cte(name="key_signature_to_stencil_normalized_for_staff_space")
 
     self.insert = simple_insert(glyph_stencil, key_signature_to_stencil)
 
-def generate_ddl(name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, note_head_height, glyph_stencil) :
+def generate_ddl(name, font_name, font_size, key_signature, width, staff_symbol, staff_space, glyph_stencil) :
   OUT = []
 
-  insert_stmt = _Insert(name, font_name, font_size, key_signature, width, key_signature_layout_info, staff_symbol, staff_space, note_head_height, glyph_stencil)
+  insert_stmt = _Insert(name, font_name, font_size, key_signature, width, staff_symbol, staff_space, glyph_stencil)
 
   del_stmt = _Delete(name, glyph_stencil)
 
@@ -116,10 +115,8 @@ if __name__ == "__main__" :
                             font_size = Font_size,
                             key_signature = Key_signature, 
                             width = Width,
-                            key_signature_layout_info = Key_signature_layout_info,
                             staff_symbol = Staff_symbol,
                             staff_space = Staff_space,
-                            note_head_height = Note_head_height,
                             glyph_stencil = Glyph_stencil))
 
   if not MANUAL_DDL :
@@ -128,19 +125,18 @@ if __name__ == "__main__" :
   Score.metadata.drop_all(engine)
   Score.metadata.create_all(engine)
 
-  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box, from_cache=True)
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_width, 'width'))
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_height, 'height'))
-  key_signature_tools.populate_key_signature_info_table(conn, Key_signature_layout_info)
+  bravura_tools.populate_glyph_box_table(conn, Glyph_box)
+  #key_signature_tools.populate_key_signature_info_table(conn, Key_signature_layout_info)
 
   stmts = []
 
   stmts.append((Line_thickness, {'id':5, 'val':0.1}))
   stmts.append((Staff_space, {'id':5, 'val':1.0}))
+  #stmts.append((Key_signature_inter_accidental_padding, {'id':-1,'val':0.1}))
 
   for x in [-4, -3, -2, -1, 0, 1, 2, 3,4] :
     stmts.append((Name, {'id':x,'val':'key_signature'}))
-    stmts.append((Font_name, {'id':x,'val':'emmentaler-20'}))
+    stmts.append((Font_name, {'id':x,'val':'Bravura'}))
     stmts.append((Font_size, {'id':x,'val':20}))
     stmts.append((Key_signature, {'id':x,'val': x}))
     stmts.append((Width, {'id':x,'val': x * 1.5}))

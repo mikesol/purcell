@@ -1,7 +1,7 @@
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from plain import *
 import time
-import emmentaler_tools
+import bravura_tools
 
 # need to find a way to work font size into this...
 
@@ -19,7 +19,7 @@ class _Insert(InsertStmt) :
 
     dots_to_dot_widths = select([
       dots.c.id.label('id'),
-      case([(dots.c.val == 0, 0.0)], else_ = ((from_ft_20_6(glyph_box.c.width) * font_size.c.val * dots.c.val / 20.0) + 
+      case([(dots.c.val == 0, 0.0)], else_ = ((glyph_box.c.width * font_size.c.val * dots.c.val / 20.0) + 
         case([(dot_padding.c.val != None, dot_padding.c.val)] , else_ = dot_padding_default.c.val) * (dots.c.val - 1)
       )).label('val')
     ]).select_from(dots.outerjoin(dot_padding, onclause = dots.c.id == dot_padding.c.id)).\
@@ -27,7 +27,7 @@ class _Insert(InsertStmt) :
                   dots.c.id == font_name.c.id,
                   dots.c.id == font_size.c.id,
                   font_name.c.val == glyph_box.c.name,
-                  glyph_box.c.idx == 50)).\
+                  glyph_box.c.unicode == "U+E1E7")).\
     cte(name='dots_to_dot_widths')
 
     self.register_stmt(dots_to_dot_widths)
@@ -78,14 +78,14 @@ if __name__ == "__main__" :
   Score.metadata.drop_all(engine)
   Score.metadata.create_all(engine)
 
-  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
+  bravura_tools.populate_glyph_box_table(conn, Glyph_box)
 
   stmts = []
 
   stmts.append((Dot_padding, {'id': -1, 'val':0.1}))
 
   for x in [0,1,2,3] :
-    stmts.append((Font_name, {'id':x,'val':'emmentaler-20'}))
+    stmts.append((Font_name, {'id':x,'val':'Bravura'}))
     stmts.append((Font_size, {'id':x,'val':20}))
     stmts.append((Dots, {'id':x,'val': x}))
     stmts.append((Dot_padding, {'id':x,'val': 0.1}))

@@ -3,7 +3,7 @@
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from plain import *
 import time
-import emmentaler_tools
+import bravura_tools
 
 # need to find a way to work font size into this...
 
@@ -14,7 +14,7 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, left_width, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, glyph_box, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
+  def __init__(self, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
     InsertStmt.__init__(self)
 
     rhythmic_event_to_accidental_padding_a = rhythmic_event_to_accidental_padding.alias(name='rhythmic_event_to_accidental_padding_alias')
@@ -36,10 +36,10 @@ class _Insert(InsertStmt) :
     self.register_stmt(real_rhythmic_event_to_left_widths)
     self.insert = simple_insert(left_width, real_rhythmic_event_to_left_widths)
 
-def generate_ddl(glyph_box, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
+def generate_ddl(note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
   OUT = []
 
-  insert_stmt = _Insert(glyph_box, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width)
+  insert_stmt = _Insert(note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width)
 
   del_stmt = _Delete(left_width)
 
@@ -63,8 +63,7 @@ if __name__ == "__main__" :
   conn = engine.connect()
   generate_sqlite_functions(conn)
 
-  manager = DDL_manager(generate_ddl(glyph_box = Glyph_box,
-                                     note_head_width = Note_head_width,
+  manager = DDL_manager(generate_ddl(note_head_width = Note_head_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
                                      left_width = Left_width))
@@ -74,8 +73,6 @@ if __name__ == "__main__" :
 
   Score.metadata.drop_all(engine)
   Score.metadata.create_all(engine)
-
-  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
 
   stmts = []
 

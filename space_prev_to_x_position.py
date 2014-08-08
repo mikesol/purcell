@@ -26,7 +26,7 @@ class _Insert(InsertStmt) :
 
     graphical_next_heads = select([
       graphical_next.c.id.label('id'),
-    ]).except_(select([graphical_next.c.val])).\
+    ]).where(graphical_next.c.prev == None).\
          cte(name="graphical_next_heads")
 
     self.register_stmt(graphical_next_heads)
@@ -42,10 +42,10 @@ class _Insert(InsertStmt) :
 
     all_x_position = start_of_chain.union_all(
       select([
-        graphical_next.c.val,
+        graphical_next.c.next,
         space_prev_prev.c.val + space_prev.c.val
       ]).\
-         where(and_(space_prev.c.id == graphical_next.c.val,
+         where(and_(space_prev.c.id == graphical_next.c.next,
                     graphical_next.c.id == space_prev_prev.c.id)))
 
     self.register_stmt(all_x_position)
@@ -102,10 +102,12 @@ if __name__ == "__main__" :
   BIG = 2**EXP
 
   for x in range(BIG) :
-    if (x != (BIG - 1)) :
-      stmts.append((Graphical_next, {'id':x, 'val':x+1}))
+    if (x == 0) :
+      stmts.append((Graphical_next, {'id':x, 'prev':None, 'next':x+1}))
+    elif (x == (BIG - 1)) :
+      stmts.append((Graphical_next, {'id':x, 'prev' : x-1, 'next':None}))
     else :
-      stmts.append((Graphical_next, {'id':x, 'val':None}))
+      stmts.append((Graphical_next, {'id':x, 'next':x+1, 'prev':x-1}))
     stmts.append((Space_prev, {'id' : x, 'val' : x * 3.0}))
     
 

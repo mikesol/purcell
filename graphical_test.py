@@ -4,7 +4,6 @@ import clef_to_width
 import clef_to_y_position
 import key_signature_to_width
 import time_signature_to_width
-import time_signature_to_height
 import accidental_to_width
 import dots_to_width
 import rhythmic_events_to_right_width
@@ -20,7 +19,7 @@ import time_signature_to_stencil
 import key_signature_to_stencil
 import duration_log_to_stencil
 
-import emmentaler_tools
+import bravura_tools
 import simple_http_server
 
 from plain import *
@@ -33,8 +32,6 @@ from sqlalchemy.exc import ResourceClosedError
 import json
 import time
 import sys
-
-print select([Line_stencil, X_position]).select_from(Line_stencil.join(X_position, onclause = Line_stencil.c.id == X_position.c.id))
 
 LOG = True
 #ECHO = True
@@ -52,12 +49,11 @@ CLEF_TO_WIDTH = T
 CLEF_TO_Y_POSITION = T
 KEY_SIGNATURE_TO_WIDTH = T
 TIME_SIGNATURE_TO_WIDTH = T
-TIME_SIGNATURE_TO_HEIGHT = T
 ACCIDENTAL_TO_WIDTH = T
 DOTS_TO_WIDTH = T
 RHYTHMIC_EVENTS_TO_RIGHT_WIDTH = T
 RHYTHMIC_EVENTS_TO_LEFT_WIDTH = T
-NEXTS_TO_GRAPHICAL_NEXT  = T
+NEXTS_TO_GRAPHICAL_NEXT  = F
 GRAPHICAL_NEXT_TO_SPACE_PREV = T
 SPACE_PREV_TO_X_POSITION  = T
 DURATION_LOG_TO_WIDTH = T
@@ -98,6 +94,7 @@ if KEY_SIGNATURE_TO_WIDTH :
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      key_signature = Key_signature,
+                                     key_signature_inter_accidental_padding = Key_signature_inter_accidental_padding,
                                      glyph_box = Glyph_box,
                                      width = Width)
 
@@ -106,7 +103,6 @@ if CLEF_TO_Y_POSITION :
                                      staff_position = Staff_position,
                                      staff_symbol = Staff_symbol,
                                      staff_space = Staff_space,
-                                     note_head_height = Note_head_height, 
                                      y_position = Y_position)
 
 ###############################
@@ -114,7 +110,7 @@ if CLEF_TO_WIDTH :
   manager.ddls += clef_to_width.generate_ddl(name = Name,
                                    font_name = Font_name,
                                    font_size = Font_size,
-                                   glyph_idx = Glyph_idx,
+                                   unicode = Unicode,
                                    glyph_box = Glyph_box,
                                    width = Width)
 
@@ -124,18 +120,8 @@ if TIME_SIGNATURE_TO_WIDTH :
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      time_signature = Time_signature,
-                                     string_box = String_box,
+                                     glyph_box = Glyph_box,
                                      width = Width)
-
-###############################
-if TIME_SIGNATURE_TO_HEIGHT :
-  manager.ddls += time_signature_to_height.generate_ddl(name = Name,
-                                     font_name = Font_name,
-                                     font_size = Font_size,
-                                     time_signature = Time_signature,
-                                     string_box = String_box,
-                                     time_signature_inter_number_padding = Time_signature_inter_number_padding,
-                                     height = Height)
 
 ###############################
 if ACCIDENTAL_TO_WIDTH :
@@ -177,16 +163,14 @@ if DOTS_TO_WIDTH :
 
 ###############################
 if RHYTHMIC_EVENTS_TO_RIGHT_WIDTH :
-  manager.ddls += rhythmic_events_to_right_width.generate_ddl(glyph_box = Glyph_box,
-                                     note_head_width = Note_head_width,
+  manager.ddls += rhythmic_events_to_right_width.generate_ddl(note_head_width = Note_head_width,
                                      dot_width = Dot_width,
                                      rhythmic_event_to_dot_padding = Rhythmic_event_to_dot_padding,
                                      right_width = Right_width)
 
 ###############################
 if RHYTHMIC_EVENTS_TO_LEFT_WIDTH :
-  manager.ddls += rhythmic_events_to_left_width.generate_ddl(glyph_box = Glyph_box,
-                                     note_head_width = Note_head_width,
+  manager.ddls += rhythmic_events_to_left_width.generate_ddl(note_head_width = Note_head_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
                                      left_width = Left_width)
@@ -218,7 +202,7 @@ if CLEF_TO_STENCIL :
   manager.ddls += clef_to_stencil.generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
-                                     glyph_idx = Glyph_idx,
+                                     unicode = Unicode,
                                      glyph_stencil = Glyph_stencil)
 
 ###############################
@@ -227,12 +211,11 @@ if TIME_SIGNATURE_TO_STENCIL :
                                      font_name = Font_name,
                                      font_size = Font_size,
                                      time_signature = Time_signature,
-                                     string_box = String_box,
+                                     glyph_box = Glyph_box,
                                      width = Width,
                                      staff_symbol = Staff_symbol,
                                      staff_space = Staff_space,
-                                     note_head_height = Note_head_height,
-                                     stencil = String_stencil)
+                                     stencil = Glyph_stencil)
 ###############################
 if STAFF_SYMBOL_TO_STENCIL :
   manager.ddls += staff_symbol_to_stencil.generate_ddl(name = Name,
@@ -240,7 +223,6 @@ if STAFF_SYMBOL_TO_STENCIL :
                                      n_lines = N_lines,
                                      staff_space = Staff_space,
                                      x_position = X_position,
-                                     note_head_height = Note_head_height,
                                      line_stencil = Line_stencil)
 
 ###############################
@@ -250,10 +232,8 @@ if KEY_SIGNATURE_TO_STENCIL :
                             font_size = Font_size,
                             key_signature = Key_signature, 
                             width = Width,
-                            key_signature_layout_info = Key_signature_layout_info,
                             staff_symbol = Staff_symbol,
                             staff_space = Staff_space,
-                            note_head_height = Note_head_height,
                             glyph_stencil = Glyph_stencil)
 
 ###############################
@@ -270,12 +250,7 @@ if not MANUAL_DDL :
 Score.metadata.drop_all(engine)
 Score.metadata.create_all(engine)
 
-emmentaler_tools.populate_glyph_box_table(conn, Glyph_box)
-emmentaler_tools.unicode_to_glyph_index_map(conn, Unicode_to_glyph_index_map)
-emmentaler_tools.add_to_string_box_table(conn, String_box, '3')
-emmentaler_tools.add_to_string_box_table(conn, String_box, '4')
-conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_width, 'width'))
-conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_height, 'height'))
+bravura_tools.populate_glyph_box_table(conn, Glyph_box)
 
 stmts = []
 
@@ -285,70 +260,78 @@ stmts.append((Dot_padding, {'id': -1, 'val':0.1}))
 stmts.append((Rhythmic_event_to_dot_padding, {'id':-1, 'val': 0.1}))
 stmts.append((Rhythmic_event_to_accidental_padding, {'id':-1, 'val': 0.1}))
 stmts.append((Time_signature_inter_number_padding, {'id':-1, 'val': 0.0}))
+stmts.append((Key_signature_inter_accidental_padding, {'id':-1, 'val': 0.5}))
 
+'''
 # link up notes in time
 TN = [3,4,5,7,8,None]
 for x in range(len(TN) - 1) :
   stmts.append((Time_next, {'id':TN[x], 'val':TN[x+1]}))
+'''
 
 # A time signature
 stmts.append((Name, {'id':0,'val':'time_signature'}))
-stmts.append((Font_name, {'id':0,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':0,'val':'Bravura'}))
 stmts.append((Font_size, {'id':0,'val':20}))
 stmts.append((Time_signature, {'id':0,'num':3,'den':4}))
 
 # A key signature
 stmts.append((Name, {'id':1,'val':'key_signature'}))
-stmts.append((Font_name, {'id':1,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':1,'val':'Bravura'}))
 stmts.append((Font_size, {'id':1,'val':20}))
 stmts.append((Key_signature, {'id':1,'val':2}))
 
 # A clef
 stmts.append((Name, {'id':2,'val':'clef'}))
-stmts.append((Font_name, {'id':2,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':2,'val':'Bravura'}))
 stmts.append((Font_size, {'id':2,'val':20}))
-stmts.append((Glyph_idx, {'id':2,'val':118}))
+stmts.append((Unicode, {'id':2,'val':"U+E050"}))
 stmts.append((Staff_position, {'id':2,'val':-1.0}))
 
 # some notes and rests
 stmts.append((Name, {'id':3,'val':'note'}))
-stmts.append((Font_name, {'id':3,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':3,'val':'Bravura'}))
 stmts.append((Font_size, {'id':3,'val':20}))
 stmts.append((Duration_log, {'id':3,'val':-2}))
 stmts.append((Dots, {'id':3,'val':1}))
 stmts.append((Accidental, {'id':3,'val':-1}))
 
 stmts.append((Name, {'id':4,'val':'rest'}))
-stmts.append((Font_name, {'id':4,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':4,'val':'Bravura'}))
 stmts.append((Font_size, {'id':4,'val':20}))
 stmts.append((Duration_log, {'id':4,'val':-1}))
 stmts.append((Dots, {'id':4,'val':2}))
 
 stmts.append((Name, {'id':5,'val':'note'}))
-stmts.append((Font_name, {'id':5,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':5,'val':'Bravura'}))
 stmts.append((Font_size, {'id':5,'val':20}))
 stmts.append((Duration_log, {'id':5,'val':0}))
 
 # another clef
 stmts.append((Name, {'id':6,'val':'clef'}))
-stmts.append((Font_name, {'id':6,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':6,'val':'Bravura'}))
 stmts.append((Font_size, {'id':6,'val':20}))
-stmts.append((Glyph_idx, {'id':6,'val':116}))
+stmts.append((Unicode, {'id':6,'val':"U+E062"}))
 stmts.append((Staff_position, {'id':6,'val':1.0}))
 
 # some notes and rests
 stmts.append((Name, {'id':7,'val':'note'}))
-stmts.append((Font_name, {'id':7,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':7,'val':'Bravura'}))
 stmts.append((Font_size, {'id':7,'val':20}))
 stmts.append((Duration_log, {'id':7,'val':-3}))
 stmts.append((Dots, {'id':7,'val':2}))
 stmts.append((Accidental, {'id':7,'val':1}))
 
 stmts.append((Name, {'id':8,'val':'rest'}))
-stmts.append((Font_name, {'id':8,'val':'emmentaler-20'}))
+stmts.append((Font_name, {'id':8,'val':'Bravura'}))
 stmts.append((Font_size, {'id':8,'val':20}))
 stmts.append((Duration_log, {'id':8,'val':-1}))
 
+NEXT = [None, 2,1,0,3,4,5,6,7,8,None]
+for x in range(1, len(NEXT) - 1) :
+  stmts.append((Graphical_next, {'id' : NEXT[x], 'next' : NEXT[x + 1], 'prev' : NEXT[x-1]}))
+
+'''
 # link up things out of time, including to their anchors
 # link up notes in time
 HT_0 = [2,1,0,None]
@@ -360,10 +343,10 @@ HT_1 = [6,None]
 for x in range(len(HT_1) - 1) :
   stmts.append((Horstemps_next, {'id':HT_1[x], 'val':HT_1[x+1]}))
   stmts.append((Horstemps_anchor, {'id':HT_1[x], 'val':7}))
-
+'''
 # make a staff symbol
 stmts.append((Name, {'id':9,'val':'staff_symbol'}))
-stmts.append((Line_thickness, {'id':9, 'val':0.5}))
+stmts.append((Line_thickness, {'id':9, 'val':0.13}))
 stmts.append((N_lines, {'id':9,'val':5}))
 stmts.append((Staff_space, {'id':9, 'val':1.0}))
 
@@ -374,10 +357,17 @@ for x in range(9) :
 
 trans = conn.begin()
 for st in stmts :
-  #print "~~~~~~~~~~~~~~~~~~~~~~~", st[0].name, st[1]
+  print "~~~~~~~~~~~~~~~~~~~~~~~", st[0].name, st[1]
   manager.insert(conn, st[0].insert().values(**st[1]), MANUAL_DDL)
 trans.commit()
 
+#for row in conn.execute(select([Space_prev])).fetchall() : print row
+#print "*"*80
+#for row in conn.execute(select([X_position])).fetchall() : print row
+#print "*"*80
+#for row in conn.execute(select([Glyph_stencil])).fetchall() : print row
+
+#sys.exit(1)
 
 '''
 OUT = {}

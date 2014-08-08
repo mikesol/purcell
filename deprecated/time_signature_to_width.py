@@ -1,4 +1,4 @@
-from sqlalchemy.sql.expression import literal, distinct, exists, text, case
+from sqlalchemy.sql.expression import literal, distinct, exists, text, case, cast
 from plain import *
 import time
 import bravura_tools
@@ -6,48 +6,52 @@ import bravura_tools
 # need to find a way to work font size into this...
 
 class _Delete(DeleteStmt) :
-  #def __init__(self, width, name) :
   def __init__(self, width) :
     def where_clause_fn(id) :
-      #stmt = select([name.c.id]).where(and_(width.c.id == id, name.c.id == id, name.c.val == 'clef'))
+      #stmt = select([name.c.id]).where(and_(width.c.id == id, name.c.id == id, name.c.val == 'time_signature'))
       #return exists(stmt)
-      return width.c.id == id
+      return width.c.val == id
     DeleteStmt.__init__(self, width, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, font_name, font_size, unicode, glyph_box, width) :
+  def __init__(self, name, font_name, font_size, time_signature, string_box, width) :
     InsertStmt.__init__(self)
 
-    clefs_to_widths = select([
+    string_box_a_1 = string_box.alias(name='string_box_a_1')
+    string_box_a_2 = string_box.alias(name='string_box_a_2')
+
+    time_signatures_to_widths = select([
       name.c.id.label('id'),
-      (glyph_box.c.width * font_size.c.val / 20.0).label('val')
-    ]).where(and_(name.c.val == 'clef',
+      sql_min_max([(from_ft_20_6(string_box_a_1.c.width) * font_size.c.val / 20.0),
+                 (from_ft_20_6(string_box_a_2.c.width) * font_size.c.val / 20.0)], True).label('val')
+    ]).where(and_(name.c.val == 'time_signature',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
-                  name.c.id == unicode.c.id,
-                  font_name.c.val == glyph_box.c.name,
-                  unicode.c.val == glyph_box.c.unicode)).\
-    cte(name='clefs_to_widths')
+                  name.c.id == time_signature.c.id,
+                  font_name.c.val == string_box_a_1.c.name,
+                  font_name.c.val == string_box_a_2.c.name,
+                  cast(time_signature.c.num, String) == string_box_a_1.c.str,
+                  cast(time_signature.c.den, String) == string_box_a_2.c.str)).\
+    cte(name='time_signatures_to_widths')
 
-    self.register_stmt(clefs_to_widths)
+    self.register_stmt(time_signatures_to_widths)
 
     #uggghhhh....
-    real_clefs_to_widths = realize(clefs_to_widths, width, 'val')
+    real_time_signatures_to_widths = realize(time_signatures_to_widths, width, 'val')
     
-    self.register_stmt(real_clefs_to_widths)
-    self.insert = simple_insert(width, real_clefs_to_widths)
+    self.register_stmt(real_time_signatures_to_widths)
+    self.insert = simple_insert(width, real_time_signatures_to_widths)
 
-def generate_ddl(name, font_name, font_size, unicode, glyph_box, width) :
+def generate_ddl(name, font_name, font_size, time_signature, string_box, width) :
   OUT = []
 
-  insert_stmt = _Insert(name, font_name, font_size, unicode, glyph_box, width)
+  insert_stmt = _Insert(name, font_name, font_size, time_signature, string_box, width)
 
-  #del_stmt = _Delete(width, name)
   del_stmt = _Delete(width)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [font_name, unicode, name]]
+     for table in [name, font_name, font_size, time_signature]]
 
   return OUT
 
@@ -68,8 +72,8 @@ if __name__ == "__main__" :
   manager = DDL_manager(generate_ddl(name = Name,
                                      font_name = Font_name,
                                      font_size = Font_size,
-                                     unicode = Unicode,
-                                     glyph_box = Glyph_box,
+                                     time_signature = Time_signature,
+                                     string_box = String_box,
                                      width = Width))
 
   if not MANUAL_DDL :
@@ -79,13 +83,16 @@ if __name__ == "__main__" :
   Score.metadata.create_all(engine)
 
   bravura_tools.populate_glyph_box_table(conn, Glyph_box)
+  bravura_tools.add_to_string_box_table(conn, String_box, '3')
+  bravura_tools.add_to_string_box_table(conn, String_box, '4')
 
   stmts = []
 
-  stmts.append((Name, {'id':0,'val':'clef'}))
+  stmts.append((Name, {'id':0,'val':'time_signature'}))
   stmts.append((Font_name, {'id':0,'val':'Bravura'}))
   stmts.append((Font_size, {'id':0,'val':20}))
-  stmts.append((Unicode, {'id':0,'val':"U+E062"}))
+  stmts.append((Time_signature, {'id':0,'num':3,'den':4}))
+  # 554 is 4, 553 is 3, etc.
 
   trans = conn.begin()
   for st in stmts :

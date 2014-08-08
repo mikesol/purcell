@@ -19,6 +19,7 @@ class _Delete(DeleteStmt) :
 # ugh ugh ugh ugh ugh ugh ugh ugh ugh ugh
 # P.S.
 # ugh
+
 class _Delete_HTA(DeleteStmt) :
   def __init__(self, graphical_next) :
     def where_clause_fn(id) :

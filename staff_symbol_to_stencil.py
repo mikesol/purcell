@@ -1,8 +1,7 @@
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from plain import *
 import time
-import emmentaler_tools
-import duration_log_to_dimension
+import bravura_tools
 
 # need to find a way to work font size into this...
 
@@ -20,7 +19,7 @@ class _Delete_XP(DeleteStmt) :
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, line_thickness, n_lines, staff_space, x_position, note_head_height, line_stencil) :
+  def __init__(self, name, line_thickness, n_lines, staff_space, x_position, line_stencil) :
     InsertStmt.__init__(self)
 
     x_position_min_max = select([
@@ -60,25 +59,24 @@ class _Insert(InsertStmt) :
         prev_line.c.id,
         prev_line.c.sub_id + 1,
         x_position_min_max.c.x_position_min,
-        prev_line.c.y0 + (staff_space.c.val * note_head_height.c.val),
+        prev_line.c.y0 + staff_space.c.val,
         x_position_min_max.c.x_position_max,
-        prev_line.c.y1 + (staff_space.c.val * note_head_height.c.val),
+        prev_line.c.y1 + staff_space.c.val,
         prev_line.c.thickness
       ]).select_from(prev_line.join(line_thickness, onclause = prev_line.c.id == line_thickness.c.id).\
         join(n_lines, onclause = prev_line.c.id == n_lines.c.id).\
         join(staff_space, onclause = prev_line.c.id == staff_space.c.id)
-      ).where(and_(prev_line.c.sub_id + 1 < n_lines.c.val,
-                    note_head_height.c.id == -101))
+      ).where(prev_line.c.sub_id + 1 < n_lines.c.val)
     )
 
     self.register_stmt(to_insert)
 
     self.insert = simple_insert(line_stencil, to_insert)
 
-def generate_ddl(name, line_thickness, n_lines, staff_space, x_position, note_head_height, line_stencil) :
+def generate_ddl(name, line_thickness, n_lines, staff_space, x_position, line_stencil) :
   OUT = []
 
-  insert_stmt = _Insert(name, line_thickness, n_lines, staff_space, x_position, note_head_height, line_stencil)
+  insert_stmt = _Insert(name, line_thickness, n_lines, staff_space, x_position, line_stencil)
 
   del_stmt = _Delete(line_stencil)
   del_stmt_xp = _Delete_XP(line_stencil)
@@ -112,7 +110,6 @@ if __name__ == "__main__" :
                                      n_lines = N_lines,
                                      staff_space = Staff_space,
                                      x_position = X_position,
-                                     note_head_height = Note_head_height,
                                      line_stencil = Line_stencil))
 
   if not MANUAL_DDL :
@@ -121,11 +118,8 @@ if __name__ == "__main__" :
   Score.metadata.drop_all(engine)
   Score.metadata.create_all(engine)
 
-  emmentaler_tools.populate_glyph_box_table(conn, Glyph_box, from_cache=True)
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_width, 'width'))
-  conn.execute(duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_height, 'height'))
+  bravura_tools.populate_glyph_box_table(conn, Glyph_box)
 
-  #print duration_log_to_dimension.initialize_dimensions_of_quarter_note(Glyph_box, Note_head_height, 'height')
   #for row in conn.execute(select([Note_head_width])).fetchall() : print row
   #for row in conn.execute(select([Note_head_height])).fetchall() : print row
 

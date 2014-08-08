@@ -60,7 +60,7 @@ manager.ddls += local_onsets_to_global_onsets.generate_ddl(
 manager.ddls += clef_to_width.generate_ddl(name = Name,
                                    font_name = Font_name,
                                    font_size = Font_size,
-                                   glyph_idx = Glyph_idx,
+                                   unicode = Unicode,
                                    glyph_box = Glyph_box,
                                    width = Width)
 

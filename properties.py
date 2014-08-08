@@ -1,5 +1,5 @@
-from sqlalchemy import Integer, Float, String
-from plain import make_table, Fraction, Line, Glyph, Str
+from sqlalchemy import Integer, Float, String, Column
+from plain import make_table, make_table_generic, Fraction
 
 Score = make_table('score', Integer)
 Staff = make_table('staff', Integer)
@@ -60,6 +60,7 @@ Dot_padding = make_table('dot_padding', Float)
 Rhythmic_event_to_dot_padding = make_table('rhythmic_event_to_dot_padding', Float)
 Rhythmic_event_to_accidental_padding = make_table('rhythmic_event_to_accidental_padding', Float)
 Time_signature_inter_number_padding = make_table('time_signature_inter_number_padding', Float)
+Key_signature_inter_accidental_padding = make_table('key_signature_inter_accidental_padding', Float)
 
 Left_tuplet_bound = make_table('left_tuplet_bound', Integer)
 Right_tuplet_bound = make_table('right_tuplet_bound', Integer)
@@ -70,7 +71,7 @@ Horstemps_anchor = make_table('horstemps_anchor', Integer)
 
 Font_name = make_table('font_name', String)
 Font_size = make_table('font_size', Float)
-Glyph_idx = make_table('glyph_idx', Integer)
+Unicode = make_table('unicode', Integer)
 
 Note_head_width = make_table('note_head_width', Float)
 Note_head_height = make_table('note_head_height', Float)
@@ -81,18 +82,46 @@ Right_width = make_table('right_width', Float)
 Width = make_table('width', Float)
 Height = make_table('height', Float)
 
-Space_prev = make_table('space_prev', Float)
+Space_prev = make_table_generic('space_prev',
+  [Column('id', Integer, primary_key=True),
+   Column('val',Float),
+   Column('prev',Integer)])
+
 X_position = make_table('x_position', Float)
 Y_position = make_table('y_position', Float)
 
-Graphical_next = make_table('graphical_next', Integer)
+Graphical_next = make_table_generic('graphical_next', [
+      Column('id', Integer, primary_key = True),
+      Column('prev', Integer, unique = True),
+      Column('next', Integer, unique = True)])
 
 Line_thickness = make_table('line_thickness', Float)
-Line_stencil = make_table('line_stencil', Line)
+Line_stencil = make_table_generic('line_stencil', [
+                     Column('id', Integer, primary_key = True),
+                     Column('sub_id', Integer, primary_key = True),
+                     Column('x0', Float),
+                     Column('y0', Float),
+                     Column('x1', Float),
+                     Column('y1', Float),
+                     Column('thickness', Float)])
 
 # Staff symbol
 N_lines = make_table('n_lines', Integer)
 Staff_space = make_table('staff_space', Float)
 
-Glyph_stencil = make_table('glyph_stencil', Glyph)
-String_stencil = make_table('string_stencil', Str)
+Glyph_stencil = make_table_generic('glyph_stencil', [Column('id', Integer, primary_key = True),
+                     Column('sub_id', Integer, primary_key = True),
+                     Column('font_name', String),
+                     Column('font_size', Float),
+                     Column('unicode', String),
+                     Column('x', Float),
+                     Column('y', Float)])
+
+String_stencil = make_table_generic('string_stencil', [Column('id', Integer, primary_key = True),
+                     Column('sub_id', Integer, primary_key = True),
+                     Column('font_name', String),
+                     Column('font_size', Float),
+                     Column('str', String),
+                     Column('x', Float),
+                     Column('y', Float)
+])
