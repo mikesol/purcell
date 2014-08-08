@@ -2,6 +2,7 @@ from sqlalchemy.sql.expression import literal, distinct, exists, text, case, cas
 from plain import *
 import time
 import bravura_tools
+import conversion_tools
 
 # need to find a way to work font size into this...
 
@@ -14,6 +15,22 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, name, font_name, font_size, time_signature, glyph_box, time_signature_inter_number_padding, height) :
     InsertStmt.__init__(self)
+    self.name = name
+    self.font_name = font_name
+    self.font_size = font_size
+    self.time_signature = time_signature
+    self.glyph_box = glyph_box
+    self.time_signature_inter_number_padding = time_signature_inter_number_padding
+    self.height = height
+
+  def _generate_stmt(self, id) :  
+    name = self.name
+    font_name = self.font_name
+    font_size = self.font_size
+    time_signature = self.time_signature
+    glyph_box = self.glyph_box
+    time_signature_inter_number_padding = self.time_signature_inter_number_padding
+    height = self.height
 
     glyph_box_a_1 = glyph_box.alias(name='glyph_box_a_1')
     glyph_box_a_2 = glyph_box.alias(name='glyph_box_a_2')
@@ -21,20 +38,20 @@ class _Insert(InsertStmt) :
 
     time_signatures_to_heights = select([
       name.c.id.label('id'),
-      (from_ft_20_6(glyph_box_a_1.c.height) * font_size.c.val / 20.0) +
+      (glyph_box_a_1.c.height * font_size.c.val / 20.0) +
                  case([(time_signature_inter_number_padding.c.val != None, time_signature_inter_number_padding.c.val)], else_ = time_signature_inter_number_padding_default.c.val) + 
-                 ((from_ft_20_6(glyph_box_a_2.c.height) * font_size.c.val / 20.0)).label('val')
-    ]).select_from(name.outerjoin(height, onclause = name.c.id == height.c.id).outerjoin(time_signature_inter_number_padding, onclause = name.c.id == time_signature_inter_number_padding.c.id)).\
+                 ((glyph_box_a_2.c.height * font_size.c.val / 20.0)).label('val')
+    ]).select_from(name.outerjoin(time_signature_inter_number_padding, onclause = name.c.id == time_signature_inter_number_padding.c.id)).\
         where(and_(name.c.val == 'time_signature',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == time_signature.c.id,
-                  height.c.val == None,
                   time_signature_inter_number_padding_default.c.id == -1,
                   font_name.c.val == glyph_box_a_1.c.name,
                   font_name.c.val == glyph_box_a_2.c.name,
-                  cast(time_signature.c.num, String) == glyph_box_a_1.c.str,
-                  cast(time_signature.c.den, String) == glyph_box_a_2.c.str)).\
+                  conversion_tools.int_to_unicode(time_signature.c.num) == glyph_box_a_1.c.unicode,
+                  conversion_tools.int_to_unicode(time_signature.c.den) == glyph_box_a_2.c.unicode)).\
+        where(safe_eq_comp(name.c.id, id)).\
     cte(name='time_signatures_to_heights')
 
     self.register_stmt(time_signatures_to_heights)
@@ -83,8 +100,6 @@ if __name__ == "__main__" :
   Score.metadata.create_all(engine)
 
   bravura_tools.populate_glyph_box_table(conn, Glyph_box)
-  bravura_tools.add_to_glyph_box_table(conn, String_box, '3')
-  bravura_tools.add_to_glyph_box_table(conn, String_box, '4')
 
   stmts = []
   stmts.append((Time_signature_inter_number_padding, {'id':-1,'val' : 0.0}))

@@ -26,7 +26,20 @@ class _Insert(InsertStmt) :
                     tuplet_fraction,
                     tuplet_factor) :
     InsertStmt.__init__(self)
+    self.left_tuplet_bound = left_tuplet_bound
+    self.right_tuplet_bound = right_tuplet_bound
+    self.time_next = time_next
+    self.tuplet_fraction = tuplet_fraction
+    self.tuplet_factor = tuplet_factor
 
+  # for now, don't use id...
+  def _generate_stmt(self, id) :
+    left_tuplet_bound = self.left_tuplet_bound
+    right_tuplet_bound = self.right_tuplet_bound
+    time_next = self.time_next
+    tuplet_fraction = self.tuplet_fraction
+    tuplet_factor = self.tuplet_factor
+    
     tuplets = easy_sj([left_tuplet_bound, right_tuplet_bound,
                        tuplet_fraction],
                       use_id = True).\

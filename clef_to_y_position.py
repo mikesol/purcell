@@ -16,6 +16,18 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, name, staff_position, staff_symbol, staff_space, y_position) :
     InsertStmt.__init__(self)
+    self.name = name
+    self.staff_position = staff_position
+    self.staff_symbol = staff_symbol
+    self.staff_space = staff_space
+    self.y_position = y_position
+
+  def _generate_stmt(self, id) :
+    name = self.name
+    staff_position = self.staff_position
+    staff_symbol = self.staff_symbol
+    staff_space = self.staff_space
+    y_position = self.y_position
 
     clefs_to_y_positions = select([
       name.c.id.label('id'),
@@ -23,15 +35,12 @@ class _Insert(InsertStmt) :
     ]).where(and_(name.c.val == 'clef',
                   name.c.id == staff_position.c.id)).\
        where(staff_spaceize(name, staff_symbol, staff_space)).\
+       where(safe_eq_comp(name.c.id, id)).\
     cte(name='clefs_to_y_positions')
 
     self.register_stmt(clefs_to_y_positions)
 
-    #uggghhhh....
-    real_clefs_to_y_positions = realize(clefs_to_y_positions, y_position, 'val')
-    
-    self.register_stmt(real_clefs_to_y_positions)
-    self.insert = simple_insert(y_position, real_clefs_to_y_positions)
+    self.insert = simple_insert(y_position, clefs_to_y_positions)
 
 def generate_ddl(name, staff_position, staff_symbol, staff_space, y_position) :
   OUT = []
@@ -83,6 +92,10 @@ if __name__ == "__main__" :
   stmts.append((Staff_symbol, {'id':0,'val': 5}))
   stmts.append((Name, {'id':0,'val':'clef'}))
   stmts.append((Staff_position, {'id':0,'val':-1}))
+
+  stmts.append((Staff_symbol, {'id':1,'val': 5}))
+  stmts.append((Name, {'id':1,'val':'clef'}))
+  stmts.append((Staff_position, {'id':1,'val':1}))
 
   trans = conn.begin()
   for st in stmts :

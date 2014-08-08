@@ -13,6 +13,18 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, font_name, font_size, duration_log, name, glyph_stencil) :
     InsertStmt.__init__(self)
+    self.font_name = font_name
+    self.font_size = font_size
+    self.duration_log = duration_log
+    self.name = name
+    self.glyph_stencil = glyph_stencil
+
+  def _generate_stmt(self, id) : 
+    font_name = self.font_name
+    font_size = self.font_size
+    duration_log = self.duration_log
+    name = self.name
+    glyph_stencil = self.glyph_stencil
 
     duration_log_to_glyph_stencils = select([
       duration_log.c.id.label('id'),
@@ -36,9 +48,8 @@ class _Insert(InsertStmt) :
       ######
     ]).select_from(duration_log.join(font_name, onclause = duration_log.c.id == font_name.c.id).\
                    join(name, onclause = duration_log.c.id == name.c.id).\
-                   join(font_size, onclause = duration_log.c.id == font_size.c.id).\
-                   outerjoin(glyph_stencil, onclause=glyph_stencil.c.id == name.c.id)).\
-    where(glyph_stencil.c.sub_id == None).\
+                   join(font_size, onclause = duration_log.c.id == font_size.c.id)).\
+    where(safe_eq_comp(duration_log.c.id, id)).\
     cte(name='duration_log_to_glyph_stencils')
 
     self.register_stmt(duration_log_to_glyph_stencils)

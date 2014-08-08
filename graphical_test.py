@@ -33,6 +33,15 @@ import json
 import time
 import sys
 
+### websocket fun!
+from gevent import monkey; monkey.patch_all()
+#from ws4py.websocket import EchoWebSocket
+from ws4py.websocket import WebSocket
+from ws4py.server.geventserver import WSGIServer
+from ws4py.server.wsgiutils import WebSocketWSGIApplication
+from ws4py.manager import WebSocketManager
+###
+
 LOG = True
 #ECHO = True
 ECHO = False
@@ -66,9 +75,9 @@ DURATION_LOG_TO_STENCIL = T
 
 #engine = create_engine('postgresql://localhost/postgres', echo=False)
 engine = create_engine('sqlite:///memory', echo=ECHO)
-conn = engine.connect()
+CONN = engine.connect()
 
-generate_sqlite_functions(conn)
+generate_sqlite_functions(CONN)
 
 manager = DDL_manager()
 
@@ -245,12 +254,12 @@ if DURATION_LOG_TO_STENCIL :
                                      glyph_stencil = Glyph_stencil)
 
 if not MANUAL_DDL :
-  manager.register_ddls(conn, LOG = True)
+  manager.register_ddls(CONN, LOG = True)
 
 Score.metadata.drop_all(engine)
 Score.metadata.create_all(engine)
 
-bravura_tools.populate_glyph_box_table(conn, Glyph_box)
+bravura_tools.populate_glyph_box_table(CONN, Glyph_box)
 
 stmts = []
 
@@ -355,17 +364,17 @@ for x in range(9) :
 
 # run!
 
-trans = conn.begin()
+trans = CONN.begin()
 for st in stmts :
   print "~~~~~~~~~~~~~~~~~~~~~~~", st[0].name, st[1]
-  manager.insert(conn, st[0].insert().values(**st[1]), MANUAL_DDL)
+  manager.insert(CONN, st[0].insert().values(**st[1]), MANUAL_DDL)
 trans.commit()
 
-#for row in conn.execute(select([Space_prev])).fetchall() : print row
+#for row in CONN.execute(select([Space_prev])).fetchall() : print row
 #print "*"*80
-#for row in conn.execute(select([X_position])).fetchall() : print row
+#for row in CONN.execute(select([X_position])).fetchall() : print row
 #print "*"*80
-#for row in conn.execute(select([Glyph_stencil])).fetchall() : print row
+#for row in CONN.execute(select([Glyph_stencil])).fetchall() : print row
 
 #sys.exit(1)
 
@@ -375,7 +384,7 @@ for table in TABLES_TO_REPORT :
   #print "!+"*40
   #print "reporting on", table.name
   #print "$%"*40
-  #for row in conn.execute(select([table])).fetchall() :
+  #for row in CONN.execute(select([table])).fetchall() :
   #  print row
   sub_d = {'columns':table.c.keys(),'rows':[]}
   for row in conn.execute(select([table])).fetchall() :
@@ -388,16 +397,17 @@ print json.dumps(OUT)
 _HOST_NAME = '' 
 _PORT_NUMBER = 8000
 
+'''
 class Engraver(object) :
-  def __init__(self, conn) :
-    self.conn = conn
+  def __init__(self, CONN) :
+    self.conn = CONN
   def engrave(self, sql) :
     out = []
     group_transactions = ('INSERT' in sql) | ('UPDATE' in sql) | ('DELETE' in sql)
     sql = sql.split(";")
     trans = None
     if group_transactions :
-      trans = conn.begin()
+      trans = self.conn.begin()
     for stmt in sql :
       result = self.conn.execute(text(stmt+";"))
       try :
@@ -410,11 +420,41 @@ class Engraver(object) :
     return json.dumps(out)
 
 server_class = simple_http_server.MyServer
-httpd = server_class((_HOST_NAME, _PORT_NUMBER), simple_http_server.MyHandler, engraver=Engraver(conn))
+httpd = server_class((_HOST_NAME, _PORT_NUMBER), simple_http_server.MyHandler, engraver=Engraver(CONN))
 print time.asctime(), "Server Starts - %s:%s" % (_HOST_NAME, _PORT_NUMBER)
 try:
   httpd.serve_forever()
 except KeyboardInterrupt:
   pass
 httpd.server_close()
+print time.asctime(), "Server Stops - %s:%s" % (_HOST_NAME, _PORT_NUMBER)
+'''
+
+WSM = WebSocketManager()
+
+class Engraver(WebSocket) :
+  def received_message(self, JSON) :
+    WSM.add(self)
+    #print JSON
+    jobj = json.loads(str(JSON))
+    out = {}
+    for obj in jobj :
+      result = CONN.execute(text(obj['sql']))
+      if obj['expected'] != [] :
+        out[obj['name']] = []
+        for row in result.fetchall() :
+          to_append = {}
+          for x in range(len(row)) :
+            to_append[obj['expected'][x]] = row[x]
+          out[obj['name']].append(to_append)
+    for WS in WSM.websockets.itervalues() :
+      WS.send(json.dumps(out), False)
+
+server = WSGIServer((_HOST_NAME, _PORT_NUMBER), WebSocketWSGIApplication(handler_cls=Engraver))
+print time.asctime(), "Server Starts - %s:%s" % (_HOST_NAME, _PORT_NUMBER)
+try:
+  server.serve_forever()
+except KeyboardInterrupt:
+  pass
+server.server_close()
 print time.asctime(), "Server Stops - %s:%s" % (_HOST_NAME, _PORT_NUMBER)

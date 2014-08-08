@@ -18,10 +18,25 @@ class _Delete_XP(DeleteStmt) :
       return line_stencil.c.id != 3.1416
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
+# UGGGGH always redraw
 class _Insert(InsertStmt) :
   def __init__(self, name, line_thickness, n_lines, staff_space, x_position, line_stencil) :
     InsertStmt.__init__(self)
+    self.name = name
+    self.line_thickness = line_thickness
+    self.n_lines = n_lines
+    self.staff_space = staff_space
+    self.x_position = x_position
+    self.line_stencil = line_stencil
 
+  def _generate_stmt(self, id) :
+    name = self.name
+    line_thickness = self.line_thickness
+    n_lines = self.n_lines
+    staff_space = self.staff_space
+    x_position = self.x_position
+    line_stencil = self.line_stencil
+    
     x_position_min_max = select([
       func.min(x_position.c.val).label('x_position_min'),
       func.max(x_position.c.val).label('x_position_max')
@@ -41,14 +56,13 @@ class _Insert(InsertStmt) :
         name.\
         join(line_thickness, onclause = name.c.id == line_thickness.c.id).\
         join(n_lines, onclause = name.c.id == n_lines.c.id).\
-        join(staff_space, onclause = name.c.id == staff_space.c.id).\
-        outerjoin(line_stencil, onclause = name.c.id == line_stencil.c.id)
+        join(staff_space, onclause = name.c.id == staff_space.c.id)
       ).where(name.c.val == "staff_symbol").\
         where(x_position_min_max.c.x_position_min != None).\
         where(x_position_min_max.c.x_position_max != None).\
-        where(line_stencil.c.sub_id == None).\
         where(n_lines.c.val > 0).cte(name = 'line_from_staff_symbol', recursive = True)
 
+    # note above the lack of anything comparing to id
     self.register_stmt(first_line)
 
     prev_line = first_line.alias(name="prev_line")
@@ -78,10 +92,10 @@ def generate_ddl(name, line_thickness, n_lines, staff_space, x_position, line_st
 
   insert_stmt = _Insert(name, line_thickness, n_lines, staff_space, x_position, line_stencil)
 
-  del_stmt = _Delete(line_stencil)
+  #del_stmt = _Delete(line_stencil)
   del_stmt_xp = _Delete_XP(line_stencil)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  OUT += [DDL_unit(table, action, [del_stmt_xp], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [name, line_thickness, n_lines, staff_space]]
 

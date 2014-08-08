@@ -84,8 +84,7 @@ Height = make_table('height', Float)
 
 Space_prev = make_table_generic('space_prev',
   [Column('id', Integer, primary_key=True),
-   Column('val',Float),
-   Column('prev',Integer)])
+   Column('prev',Integer), Column('val',Float),])
 
 X_position = make_table('x_position', Float)
 Y_position = make_table('y_position', Float)

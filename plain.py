@@ -205,13 +205,19 @@ class InsertStmt(object) :
   def __init__(self) :
     self.stmts = []
     self.insert = None
-  def get_stmt(self) :
+  def generate_stmt(self, id) :
+    self.stmts = []
+    self.insert = None
+    self._generate_stmt(id) 
+  def get_stmt(self, id) :
+    self.generate_stmt(id)
     return self.insert
   def register_stmt(self, stmt) :
     self.stmts.append(stmt)
   def register_insert(self, insert) :
     self.insert = insert
-  def debug_before(self, conn, verbose = _GLOBAL_VERBOSE) :
+  def debug_before(self, conn, id, verbose = _GLOBAL_VERBOSE) :
+    self.generate_stmt(id)
     for stmt in self.stmts :
       print "****", stmt.name, "****"
       if verbose :
@@ -226,6 +232,8 @@ class InsertStmt(object) :
     if True :
       print "HERE IS THE INSERT STMT"
       print self.insert
+      print "))))))))))))))))) and the parameters"
+      print self.insert.parameters
       print "&&&&&&&&&&&&&&&&&&&&&&&"
     #conn.execute(self.insert)
   def debug_after(self, conn, verbose = _GLOBAL_VERBOSE) :
@@ -283,7 +291,7 @@ class DDL_unit(object) :
     self.before = before
   def as_ddl(self, LOG = False) :
     del_st = '\n'.join([str(delete.get_stmt('@ID@').compile(compile_kwargs={"literal_binds": True}))+";" for delete in self.deletes])
-    inst_st = '\n'.join([str(insert.get_stmt().compile(compile_kwargs={"literal_binds": True}))+";" for insert in self.inserts])
+    inst_st = '\n'.join([str(insert.get_stmt('@ID@').compile(compile_kwargs={"literal_binds": True}))+";" for insert in self.inserts])
     trigger = '''CREATE TRIGGER {2} {6} {1} ON {0}
       BEGIN
           {3}
@@ -365,8 +373,8 @@ class DDL_manager(object) :
             self.delete(conn, stmt, True)
             delete.debug_after(conn = conn, id = id)
           for insert in ddl.inserts :
-            insert.debug_before(conn = conn)
-            stmt = insert.get_stmt()
+            insert.debug_before(conn = conn, id = id)
+            stmt = insert.get_stmt(id = id)
             print "--PERFORMING INSERT ON", stmt.table.name, "TRIGGERED By", action, "ON", table.name
             self.insert(conn, stmt, True)
             insert.debug_after(conn = conn)
@@ -407,6 +415,11 @@ def sql_min_max(l, MAX=False) :
     L.append(and_(*to_add))
   OUT = [(L[x], l[x]) for x in range(len(L))]
   return case(OUT, else_ = None)
+
+def safe_eq_comp(a,b) :
+  if b == None :
+    raise ValueError
+  return a == b
 
 def staff_spaceize(table, staff_symbol, staff_space) :
   return and_(table.c.id == staff_symbol.c.id, staff_symbol.c.val == staff_space.c.id)

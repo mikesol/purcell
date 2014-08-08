@@ -14,7 +14,21 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, font_name, font_size, dots, glyph_box, dot_padding, dot_width) :
     InsertStmt.__init__(self)
- 
+    self.font_name = font_name
+    self.font_size = font_size
+    self.dots = dots
+    self.glyph_box = glyph_box
+    self.dot_padding = dot_padding
+    self.dot_width = dot_width
+
+  def _generate_stmt(self, id) :
+    font_name = self.font_name
+    font_size = self.font_size
+    dots = self.dots
+    glyph_box = self.glyph_box
+    dot_padding = self.dot_padding
+    dot_width = self.dot_width
+
     dot_padding_default = dot_padding.alias(name='dot_padding_default')
 
     dots_to_dot_widths = select([
@@ -28,15 +42,12 @@ class _Insert(InsertStmt) :
                   dots.c.id == font_size.c.id,
                   font_name.c.val == glyph_box.c.name,
                   glyph_box.c.unicode == "U+E1E7")).\
+        where(safe_eq_comp(dots.c.id, id)).\
     cte(name='dots_to_dot_widths')
 
     self.register_stmt(dots_to_dot_widths)
 
-    #uggghhhh....
-    real_dots_to_dot_widths = realize(dots_to_dot_widths, dot_width, 'val')
-    
-    self.register_stmt(real_dots_to_dot_widths)
-    self.insert = simple_insert(dot_width, real_dots_to_dot_widths)
+    self.insert = simple_insert(dot_width, dots_to_dot_widths)
 
 def generate_ddl(font_name, font_size, dots, glyph_box, dot_padding, dot_width) :
   OUT = []

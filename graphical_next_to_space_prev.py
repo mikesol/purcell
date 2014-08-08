@@ -12,6 +12,7 @@ class _Delete(DeleteStmt) :
   def __init__(self, space_prev) :
     def where_clause_fn(id) :
       return or_(space_prev.c.id == id, space_prev.c.prev == id)
+      #return space_prev.c.id != 3.1416
     DeleteStmt.__init__(self, space_prev, where_clause_fn)
 
 def _is_rhythmic_event(name) :
@@ -68,6 +69,22 @@ def _NOTE_NOTE(name_left, name_right, duration, right_width, left_width) :
 class _Insert(InsertStmt) :
   def __init__(self, graphical_next, name, width, left_width, right_width, duration, space_prev) :
     InsertStmt.__init__(self)
+    self.graphical_next = graphical_next
+    self.name = name
+    self.width = width
+    self.left_width = left_width
+    self.right_width = right_width
+    self.duration = duration
+    self.space_prev = space_prev
+
+  def _generate_stmt(self, id) :
+    graphical_next = self.graphical_next
+    name = self.name
+    width = self.width
+    left_width = self.left_width
+    right_width = self.right_width
+    duration = self.duration
+    space_prev = self.space_prev
 
     name_left = name.alias('name_left')
     name_right = name.alias('name_right')
@@ -92,14 +109,14 @@ class _Insert(InsertStmt) :
                _NOTE_KEY(name_left, name_right, right_width, width_right),
                _NOTE_NOTE(name_left, name_right, duration, right_width, left_width),
         ], else_ = 0.0).label('val'),
-        name_left.c.val,
-        name_right.c.val,
-        width_left.c.val,
-        width_right.c.val,
-        left_width.c.val,
-        right_width.c.val,
-        duration.c.num,
-        duration.c.den,
+        #name_left.c.val,
+        #name_right.c.val,
+        #width_left.c.val,
+        #width_right.c.val,
+        #left_width.c.val,
+        #right_width.c.val,
+        #duration.c.num,
+        #duration.c.den,
       ]).select_from(graphical_next.\
                        outerjoin(name_left, onclause = name_left.c.id == graphical_next.c.prev).\
                        outerjoin(name_right, onclause = name_right.c.id == graphical_next.c.id).\
@@ -109,19 +126,12 @@ class _Insert(InsertStmt) :
                        outerjoin(left_width, onclause = left_width.c.id == graphical_next.c.id).\
                        outerjoin(duration, onclause = duration.c.id == graphical_next.c.prev)
                        ).\
+      where(or_(graphical_next.c.id == id, graphical_next.c.prev == id)).\
       cte(name="all_space_prev")
 
     self.register_stmt(all_space_prev)
 
-    #delete_me_asap = select([space_prev]).cte(name='delete_me_asap')
-
-    #self.register_stmt(delete_me_asap)
-
-    giant_kludge = realize(all_space_prev, space_prev, 'val')
-
-    self.register_stmt(giant_kludge)
-
-    self.insert = simple_insert(space_prev, giant_kludge)
+    self.insert = simple_insert(space_prev, all_space_prev)
 
 def generate_ddl(graphical_next, name, width, left_width, right_width, duration, space_prev) :
 
@@ -214,5 +224,5 @@ if __name__ == "__main__" :
   print "&&&&&&&&&& DONE"
 
   NOW = time.time()
-  for row in conn.execute(select([Space_prev])).fetchall() :
+  for row in conn.execute(select([Space_prev.c.id, Space_prev.c.prev, Space_prev.c.val])).fetchall() :
     print row

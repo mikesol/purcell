@@ -22,6 +22,24 @@ def _wind_inside_staff(v) :
 class _Insert(InsertStmt) :
   def __init__(self, name, font_name, font_size, key_signature, width, staff_symbol, staff_space, glyph_stencil) :
     InsertStmt.__init__(self)
+    self.name = name
+    self.font_name = font_name
+    self.font_size = font_size
+    self.key_signature = key_signature
+    self.width = width
+    self.staff_symbol = staff_symbol
+    self.staff_space = staff_space
+    self.glyph_stencil = glyph_stencil
+
+  def _generate_stmt(self, id) :
+    name = self.name
+    font_name = self.font_name
+    font_size = self.font_size
+    key_signature = self.key_signature
+    width = self.width
+    staff_symbol = self.staff_symbol
+    staff_space = self.staff_space
+    glyph_stencil = self.glyph_stencil
 
     key_signature_to_stencil_head = select([
       key_signature.c.id.label('id'),
@@ -32,14 +50,14 @@ class _Insert(InsertStmt) :
         ], else_ = "U+E260").label('unicode'),
       literal(0).label('x'),
       case([(key_signature.c.val > 0, 2.0)],else_=0.0).label('y'),
-    ]).select_from(name.outerjoin(glyph_stencil, onclause=name.c.id == glyph_stencil.c.id)).\
-          where(and_(
+    ]).\
+       where(and_(
                   name.c.val == 'key_signature',
-                  glyph_stencil.c.sub_id == None,
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == key_signature.c.id,
                   key_signature.c.val != 0)).\
+      where(safe_eq_comp(key_signature.c.id, id)).\
          cte(name="key_signature_to_stencil", recursive=True)
 
     self.register_stmt(key_signature_to_stencil_head)

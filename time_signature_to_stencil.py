@@ -21,6 +21,26 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, name, font_name, font_size, time_signature, glyph_box, width, staff_symbol, staff_space, stencil) :
     InsertStmt.__init__(self)
+    self.name = name
+    self.font_name = font_name
+    self.font_size = font_size
+    self.time_signature = time_signature
+    self.glyph_box = glyph_box
+    self.width = width
+    self.staff_symbol = staff_symbol
+    self.staff_space = staff_space
+    self.stencil = stencil
+
+  def _generate_stmt(self, id) :
+    name = self.name
+    font_name = self.font_name
+    font_size = self.font_size
+    time_signature = self.time_signature
+    glyph_box = self.glyph_box
+    width = self.width
+    staff_symbol = self.staff_symbol
+    staff_space = self.staff_space
+    stencil = self.stencil
 
     glyph_box_a_1 = glyph_box.alias(name='glyph_box_a_1')
     glyph_box_a_2 = glyph_box.alias(name='glyph_box_a_2')
@@ -37,17 +57,17 @@ class _Insert(InsertStmt) :
       #literal(0.0).label('den_y')
       (staff_space.c.val * 1.0).label('num_y'),
       (staff_space.c.val * 3.0).label('den_y'),
-    ]).select_from(name.outerjoin(stencil, onclause = name.c.id == stencil.c.id)).where(and_(name.c.val == 'time_signature',
+    ]).where(and_(name.c.val == 'time_signature',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == time_signature.c.id,
                   name.c.id == width.c.id,
-                  stencil.c.sub_id == None,
                   font_name.c.val == glyph_box_a_1.c.name,
                   font_name.c.val == glyph_box_a_2.c.name,
                   conversion_tools.int_to_unicode(time_signature.c.num) == glyph_box_a_1.c.unicode,
                   conversion_tools.int_to_unicode(time_signature.c.den) == glyph_box_a_2.c.unicode)).\
          where(staff_spaceize(name, staff_symbol, staff_space)).\
+         where(safe_eq_comp(name.c.id, id)).\
     cte(name='time_signatures_to_xy_info')
 
     self.register_stmt(time_signatures_to_xy_info)

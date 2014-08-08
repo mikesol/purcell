@@ -16,6 +16,16 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
     InsertStmt.__init__(self)
+    self.note_head_width = note_head_width
+    self.accidental_width = accidental_width
+    self.rhythmic_event_to_accidental_padding = rhythmic_event_to_accidental_padding
+    self.left_width = left_width
+
+  def _generate_stmt(self, id) :
+    note_head_width = self.note_head_width
+    accidental_width = self.accidental_width
+    rhythmic_event_to_accidental_padding = self.rhythmic_event_to_accidental_padding
+    left_width = self.left_width
 
     rhythmic_event_to_accidental_padding_a = rhythmic_event_to_accidental_padding.alias(name='rhythmic_event_to_accidental_padding_alias')
 
@@ -24,17 +34,15 @@ class _Insert(InsertStmt) :
       (note_head_width.c.val +\
         case([(accidental_width.c.val == None, 0)], else_ = accidental_width.c.val) +\
         case([(accidental_width.c.val == None, 0), (rhythmic_event_to_accidental_padding.c.val == None, rhythmic_event_to_accidental_padding_a.c.val)], else_ = rhythmic_event_to_accidental_padding.c.val)).label('val')
-    ]).select_from(note_head_width.outerjoin(accidental_width, onclause = note_head_width.c.id == accidental_width.c.id)).\
+    ]).select_from(note_head_width.outerjoin(accidental_width, onclause = note_head_width.c.id == accidental_width.c.id).\
+        outerjoin(rhythmic_event_to_accidental_padding, onclause = note_head_width.c.id == rhythmic_event_to_accidental_padding.c.id)).\
        where(rhythmic_event_to_accidental_padding_a.c.id == -1).\
+       where(safe_eq_comp(note_head_width.c.id, id)).\
     cte(name='rhythmic_event_to_left_widths')
 
     self.register_stmt(rhythmic_event_to_left_widths)
 
-    #uggghhhh....
-    real_rhythmic_event_to_left_widths = realize(rhythmic_event_to_left_widths, left_width, 'val')
-    
-    self.register_stmt(real_rhythmic_event_to_left_widths)
-    self.insert = simple_insert(left_width, real_rhythmic_event_to_left_widths)
+    self.insert = simple_insert(left_width, rhythmic_event_to_left_widths)
 
 def generate_ddl(note_head_width, accidental_width, rhythmic_event_to_accidental_padding, left_width) :
   OUT = []
@@ -56,8 +64,8 @@ if __name__ == "__main__" :
   from sqlalchemy import event, DDL
   
   ECHO = False
-  MANUAL_DDL = True
-  #MANUAL_DDL = False
+  #MANUAL_DDL = True
+  MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
   engine = create_engine('sqlite:///memory', echo=ECHO)
   conn = engine.connect()

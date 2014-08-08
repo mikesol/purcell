@@ -12,6 +12,22 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, font_name, font_size, duration_log, glyph_box, name, rhythmic_event_dimension, dimension) :
     InsertStmt.__init__(self)
+    self.font_name = font_name
+    self.font_size = font_size
+    self.duration_log = duration_log
+    self.glyph_box = glyph_box
+    self.name = name
+    self.rhythmic_event_dimension = rhythmic_event_dimension
+    self.dimension = dimension
+
+  def _generate_stmt(self, id) :
+    font_name = self.font_name
+    font_size = self.font_size
+    duration_log = self.duration_log
+    glyph_box = self.glyph_box
+    name = self.name
+    rhythmic_event_dimension = self.rhythmic_event_dimension
+    dimension = self.dimension
 
     duration_log_to_rhythmic_event_dimensions = select([
       duration_log.c.id.label('id'),
@@ -19,7 +35,9 @@ class _Insert(InsertStmt) :
     ]).select_from(duration_log.join(font_name, onclause = duration_log.c.id == font_name.c.id).\
                    join(name, onclause = duration_log.c.id == name.c.id).\
                    join(font_size, onclause = duration_log.c.id == font_size.c.id).\
-                   join(glyph_box, onclause = font_name.c.val == glyph_box.c.name)).where(
+                   join(glyph_box, onclause = font_name.c.val == glyph_box.c.name)).\
+          where(safe_eq_comp(duration_log.c.id, id)).\
+          where(
              and_(glyph_box.c.unicode == case([(and_(duration_log.c.val == -1, name.c.val == 'note'), "U+E0A3"),
                                             (and_(duration_log.c.val == 0, name.c.val == 'note'), "U+E0A2"),
                                             (and_(duration_log.c.val == 0, name.c.val == 'rest'), "U+E4E3"),
@@ -36,11 +54,7 @@ class _Insert(InsertStmt) :
 
     self.register_stmt(duration_log_to_rhythmic_event_dimensions)
 
-    #uggghhhh....
-    real_duration_log_to_rhythmic_event_dimensions = realize(duration_log_to_rhythmic_event_dimensions, rhythmic_event_dimension, 'val')
-    
-    self.register_stmt(real_duration_log_to_rhythmic_event_dimensions)
-    self.insert = simple_insert(rhythmic_event_dimension, real_duration_log_to_rhythmic_event_dimensions)
+    self.insert = simple_insert(rhythmic_event_dimension, duration_log_to_rhythmic_event_dimensions)
 
 def generate_ddl(font_name, font_size, duration_log, glyph_box, name, rhythmic_event_dimension, dimension) :
   OUT = []

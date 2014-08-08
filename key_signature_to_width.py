@@ -17,6 +17,23 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, name, font_name, font_size, key_signature, key_signature_inter_accidental_padding, glyph_box, width) :
     InsertStmt.__init__(self)
+    self.name = name
+    self.font_name = font_name
+    self.font_size = font_size
+    self.key_signature = key_signature
+    self.key_signature_inter_accidental_padding = key_signature_inter_accidental_padding
+    self.glyph_box = glyph_box
+    self.width = width
+
+  def _generate_stmt(self, id) :
+
+    name = self.name
+    font_name = self.font_name
+    font_size = self.font_size
+    key_signature = self.key_signature
+    key_signature_inter_accidental_padding = self.key_signature_inter_accidental_padding
+    glyph_box = self.glyph_box
+    width = self.width
 
     key_signature_inter_accidental_padding_default = key_signature_inter_accidental_padding.alias(name="key_signature_inter_accidental_padding_default")
     key_signatures_to_widths = select([
@@ -36,15 +53,12 @@ class _Insert(InsertStmt) :
                   key_signature_inter_accidental_padding_default.c.id == -1,
                   case([(key_signature.c.val > 0,  glyph_box.c.unicode == "U+E262")], else_ = glyph_box.c.unicode == "U+E260")
                   )).\
+        where(safe_eq_comp(name.c.id, id)).\
     cte(name='key_signatures_to_widths')
 
     self.register_stmt(key_signatures_to_widths)
 
-    #uggghhhh....
-    real_key_signatures_to_widths = realize(key_signatures_to_widths, width, 'val')
-    
-    self.register_stmt(real_key_signatures_to_widths)
-    self.insert = simple_insert(width, real_key_signatures_to_widths)
+    self.insert = simple_insert(width, key_signatures_to_widths)
 
 def generate_ddl(name, font_name, font_size, key_signature, key_signature_inter_accidental_padding, glyph_box, width) :
   OUT = []

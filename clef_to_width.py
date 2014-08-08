@@ -3,25 +3,40 @@ from plain import *
 import time
 import bravura_tools
 
+from functools import partial
+
 # need to find a way to work font size into this...
 
 class _Delete(DeleteStmt) :
   #def __init__(self, width, name) :
-  def __init__(self, width) :
+  def __init__(self, name, width) :
     def where_clause_fn(id) :
-      #stmt = select([name.c.id]).where(and_(width.c.id == id, name.c.id == id, name.c.val == 'clef'))
-      #return exists(stmt)
-      return width.c.id == id
+      stmt = select([name.c.id]).where(and_(width.c.id == id, name.c.id == id, name.c.val == 'clef'))
+      return exists(stmt)
     DeleteStmt.__init__(self, width, where_clause_fn)
 
 class _Insert(InsertStmt) :
   def __init__(self, name, font_name, font_size, unicode, glyph_box, width) :
     InsertStmt.__init__(self)
-
+    self.name = name
+    self.font_name = font_name
+    self.font_size = font_size
+    self.unicode = unicode
+    self.glyph_box = glyph_box
+    self.width = width
+  def _generate_stmt(self, id) :
+    name = self.name
+    font_name = self.font_name
+    font_size = self.font_size
+    unicode = self.unicode
+    glyph_box = self.glyph_box
+    width = self.width
+  
     clefs_to_widths = select([
       name.c.id.label('id'),
       (glyph_box.c.width * font_size.c.val / 20.0).label('val')
-    ]).where(and_(name.c.val == 'clef',
+    ]).where(and_(safe_eq_comp(name.c.id, id),
+                  name.c.val == 'clef',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == unicode.c.id,
@@ -32,18 +47,18 @@ class _Insert(InsertStmt) :
     self.register_stmt(clefs_to_widths)
 
     #uggghhhh....
-    real_clefs_to_widths = realize(clefs_to_widths, width, 'val')
+    #real_clefs_to_widths = realize(clefs_to_widths, width, 'val')
     
-    self.register_stmt(real_clefs_to_widths)
-    self.insert = simple_insert(width, real_clefs_to_widths)
+    #self.register_stmt(real_clefs_to_widths)
+    #self.insert = simple_insert(width, real_clefs_to_widths)
+    self.insert = simple_insert(width, clefs_to_widths)
 
 def generate_ddl(name, font_name, font_size, unicode, glyph_box, width) :
   OUT = []
 
   insert_stmt = _Insert(name, font_name, font_size, unicode, glyph_box, width)
 
-  #del_stmt = _Delete(width, name)
-  del_stmt = _Delete(width)
+  del_stmt = _Delete(name, width)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']

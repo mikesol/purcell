@@ -17,6 +17,20 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, name, font_name, font_size, time_signature, glyph_box, width) :
     InsertStmt.__init__(self)
+    self.name = name
+    self.font_name = font_name
+    self.font_size = font_size
+    self.time_signature = time_signature
+    self.glyph_box = glyph_box
+    self.width = width
+
+  def _generate_stmt(self, id) :
+    name = self.name
+    font_name = self.font_name
+    font_size = self.font_size
+    time_signature = self.time_signature
+    glyph_box = self.glyph_box
+    width = self.width
 
     glyph_box_a_1 = glyph_box.alias(name='glyph_box_a_1')
     glyph_box_a_2 = glyph_box.alias(name='glyph_box_a_2')
@@ -33,15 +47,12 @@ class _Insert(InsertStmt) :
                   font_name.c.val == glyph_box_a_2.c.name,
                   conversion_tools.int_to_unicode(time_signature.c.num) == glyph_box_a_1.c.unicode,
                   conversion_tools.int_to_unicode(time_signature.c.den) == glyph_box_a_2.c.unicode)).\
+      where(safe_eq_comp(name.c.id, id)).\
     cte(name='time_signatures_to_widths')
 
     self.register_stmt(time_signatures_to_widths)
 
-    #uggghhhh....
-    real_time_signatures_to_widths = realize(time_signatures_to_widths, width, 'val')
-    
-    self.register_stmt(real_time_signatures_to_widths)
-    self.insert = simple_insert(width, real_time_signatures_to_widths)
+    self.insert = simple_insert(width, time_signatures_to_widths)
 
 def generate_ddl(name, font_name, font_size, time_signature, glyph_box, width) :
   OUT = []

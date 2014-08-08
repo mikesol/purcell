@@ -27,43 +27,34 @@ class _Insert(InsertStmt) :
                     duration) :
 
     InsertStmt.__init__(self)
+    self.duration_log = duration_log
+    self.dots = dots
+    self.tuplet_factor = tuplet_factor
+    self.duration = duration
 
-    durationless_tuplet_factors = select([tuplet_factor]).\
-        select_from(tuplet_factor.outerjoin(duration,
-                         onclause=tuplet_factor.c.id == duration.c.id)).\
-        where(duration.c.id == None).cte("durationless_tuplet_factor")
-
-    self.register_stmt(durationless_tuplet_factors)
-
-    durationless_dots = select([dots]).\
-        select_from(dots.outerjoin(duration,
-                         onclause=dots.c.id == duration.c.id)).\
-        where(duration.c.id == None).cte("durationless_dots")
-
-    self.register_stmt(durationless_dots)
-
-    durationless_duration_logs = select([duration_log]).\
-           select_from(duration_log.outerjoin(duration,
-                  onclause=duration_log.c.id == duration.c.id)).\
-           where(duration.c.id == None).cte("durationless_duration_logs")
-
-    self.register_stmt(durationless_duration_logs)
-
+  def _generate_stmt(self, id) :
+    duration_log = self.duration_log
+    dots = self.dots
+    tuplet_factor = self.tuplet_factor
+    duration = self.duration
+    
     rhythmic_events_to_durations =\
-      select([durationless_duration_logs.c.id,
-              (func.coalesce(durationless_tuplet_factors.c.num, 1) *\
-              ((2 * func.pow(2, func.coalesce(durationless_dots.c.val,0))) - 1 ) *\
-              case([(durationless_duration_logs.c.val > 0, func.pow(2,durationless_duration_logs.c.val))], else_ = 1)).label('num'),
-              (func.coalesce(durationless_tuplet_factors.c.den, 1) *\
-              func.pow(2, func.coalesce(durationless_dots.c.val,0)) *\
-              case([(durationless_duration_logs.c.val < 0, func.pow(2,func.abs(durationless_duration_logs.c.val)))], else_ = 1)).label('den')]).\
-        select_from(durationless_duration_logs.\
-          outerjoin(durationless_tuplet_factors,
-                    onclause = durationless_duration_logs.c.id ==\
-                       durationless_tuplet_factors.c.id).\
-          outerjoin(durationless_dots,
-                    onclause = durationless_dots.c.id ==\
-                          durationless_duration_logs.c.id)).cte(name = "rhythmic_events_to_durations")
+      select([duration_log.c.id,
+              (func.coalesce(tuplet_factor.c.num, 1) *\
+              ((2 * func.pow(2, func.coalesce(dots.c.val,0))) - 1 ) *\
+              case([(duration_log.c.val > 0, func.pow(2,duration_log.c.val))], else_ = 1)).label('num'),
+              (func.coalesce(tuplet_factor.c.den, 1) *\
+              func.pow(2, func.coalesce(dots.c.val,0)) *\
+              case([(duration_log.c.val < 0, func.pow(2,func.abs(duration_log.c.val)))], else_ = 1)).label('den')]).\
+        select_from(duration_log.\
+          outerjoin(tuplet_factor,
+                    onclause = duration_log.c.id ==\
+                       tuplet_factor.c.id).\
+          outerjoin(dots,
+                    onclause = dots.c.id ==\
+                          duration_log.c.id)).\
+        where(safe_eq_comp(duration_log.c.id, id)).\
+        cte(name = "rhythmic_events_to_durations")
 
     self.register_stmt(rhythmic_events_to_durations)
 

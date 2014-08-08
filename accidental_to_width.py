@@ -14,6 +14,17 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, font_name, font_size, accidental, glyph_box, accidental_width) :
     InsertStmt.__init__(self)
+    self.font_name = font_name
+    self.font_size = font_size
+    self.accidental = accidental
+    self.glyph_box = glyph_box
+    self.accidental_width = accidental_width
+  def _generate_stmt(self, id) :
+    font_name = self.font_name
+    font_size = self.font_size
+    accidental = self.accidental
+    glyph_box = self.glyph_box
+    accidental_width = self.accidental_width
 
     accidental_to_accidental_widths = select([
       accidental.c.id.label('id'),
@@ -25,15 +36,17 @@ class _Insert(InsertStmt) :
                                            (accidental.c.val == 0, "U+E261"),
                                            (accidental.c.val == 1, "U+E262")],
                                            ))).\
+    where(safe_eq_comp(accidental.c.id, id)).\
     cte(name='accidental_to_accidental_widths')
 
     self.register_stmt(accidental_to_accidental_widths)
 
     #uggghhhh....
-    real_accidental_to_accidental_widths = realize(accidental_to_accidental_widths, accidental_width, 'val')
+    #real_accidental_to_accidental_widths = realize(accidental_to_accidental_widths, accidental_width, 'val')
     
-    self.register_stmt(real_accidental_to_accidental_widths)
-    self.insert = simple_insert(accidental_width, real_accidental_to_accidental_widths)
+    #self.register_stmt(real_accidental_to_accidental_widths)
+    #self.insert = simple_insert(accidental_width, real_accidental_to_accidental_widths)
+    self.insert = simple_insert(accidental_width, accidental_to_accidental_widths)
 
 def generate_ddl(font_name, font_size, accidental, glyph_box, accidental_width) :
   OUT = []

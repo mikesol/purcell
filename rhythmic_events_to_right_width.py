@@ -14,7 +14,17 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, note_head_width, dot_width, rhythmic_event_to_dot_padding, right_width) :
     InsertStmt.__init__(self)
+    self.note_head_width = note_head_width
+    self.dot_width = dot_width
+    self.rhythmic_event_to_dot_padding = rhythmic_event_to_dot_padding
+    self.right_width = right_width
 
+  def _generate_stmt(self, id) :
+    note_head_width = self.note_head_width
+    dot_width = self.dot_width
+    rhythmic_event_to_dot_padding = self.rhythmic_event_to_dot_padding
+    right_width = self.right_width
+    
     rhythmic_event_to_dot_padding_a = rhythmic_event_to_dot_padding.alias(name='rhythmic_event_to_dot_padding_alias')
 
     rhythmic_event_to_right_widths = select([
@@ -22,17 +32,15 @@ class _Insert(InsertStmt) :
       (note_head_width.c.val +\
         case([(dot_width.c.val == None, 0)], else_ = dot_width.c.val) +\
         case([(dot_width.c.val == None, 0), (rhythmic_event_to_dot_padding.c.val == None, rhythmic_event_to_dot_padding_a.c.val)], else_ = rhythmic_event_to_dot_padding.c.val)).label('val')
-    ]).select_from(note_head_width.outerjoin(dot_width, onclause = note_head_width.c.id == dot_width.c.id)).\
+    ]).select_from(note_head_width.outerjoin(dot_width, onclause = note_head_width.c.id == dot_width.c.id).\
+         outerjoin(rhythmic_event_to_dot_padding, onclause = note_head_width.c.id == rhythmic_event_to_dot_padding.c.id)).\
        where(rhythmic_event_to_dot_padding_a.c.id == -1).\
+       where(safe_eq_comp(note_head_width.c.id, id)).\
     cte(name='rhythmic_event_to_right_widths')
 
     self.register_stmt(rhythmic_event_to_right_widths)
 
-    #uggghhhh....
-    real_rhythmic_event_to_right_widths = realize(rhythmic_event_to_right_widths, right_width, 'val')
-    
-    self.register_stmt(real_rhythmic_event_to_right_widths)
-    self.insert = simple_insert(right_width, real_rhythmic_event_to_right_widths)
+    self.insert = simple_insert(right_width, rhythmic_event_to_right_widths)
 
 def generate_ddl(note_head_width, dot_width, rhythmic_event_to_dot_padding, right_width) :
   OUT = []
@@ -54,8 +62,8 @@ if __name__ == "__main__" :
   from sqlalchemy import event, DDL
   
   ECHO = False
-  MANUAL_DDL = True
-  #MANUAL_DDL = False
+  #MANUAL_DDL = True
+  MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
   engine = create_engine('sqlite:///memory', echo=ECHO)
   conn = engine.connect()
@@ -73,7 +81,6 @@ if __name__ == "__main__" :
   Score.metadata.create_all(engine)
 
   bravura_tools.populate_glyph_box_table(conn, Glyph_box)
-
   stmts = []
 
   stmts.append((Rhythmic_event_to_dot_padding, {'id':-1,'val': 0.1}))

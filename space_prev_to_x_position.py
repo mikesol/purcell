@@ -1,4 +1,5 @@
 # for now, deals with one line of music...
+# we just delete everything for now...too complicated_otherwise
 
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case, and_, or_
 from plain import *
@@ -23,6 +24,14 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, graphical_next, space_prev, x_position) :
     InsertStmt.__init__(self)
+    self.graphical_next = graphical_next
+    self.space_prev = space_prev
+    self.x_position = x_position
+
+  def _generate_stmt(self, id) :
+    graphical_next = self.graphical_next
+    space_prev = self.space_prev
+    x_position = self.x_position
 
     graphical_next_heads = select([
       graphical_next.c.id.label('id'),

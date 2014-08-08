@@ -19,7 +19,18 @@ class _Delete(DeleteStmt) :
 class _Insert(InsertStmt) :
   def __init__(self, name, font_name, font_size, unicode, glyph_stencil) :
     InsertStmt.__init__(self)
-
+    self.name = name
+    self.font_name = font_name
+    self.font_size = font_size
+    self.unicode = unicode
+    self.glyph_stencil = glyph_stencil
+  def _generate_stmt(self, id) :
+    name = self.name
+    font_name = self.font_name
+    font_size = self.font_size
+    unicode = self.unicode
+    glyph_stencil = self.glyph_stencil
+    
     clefs_to_stencils = select([
       name.c.id.label('id'),
       literal(0).label('sub_id'),
@@ -28,12 +39,12 @@ class _Insert(InsertStmt) :
       unicode.c.val.label('unicode'),
       literal(0).label('x'),
       literal(0).label('y'),
-    ]).select_from(name.outerjoin(glyph_stencil, onclause = name.c.id == glyph_stencil.c.id)).where(and_(name.c.val == 'clef',
+    ]).where(and_(name.c.val == 'clef',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == unicode.c.id,
-                  glyph_stencil.c.sub_id == None
                   )).\
+    where(safe_eq_comp(name.c.id, id)).\
     cte(name='clefs_to_stencils')
 
     self.register_stmt(clefs_to_stencils)
