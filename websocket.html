@@ -8,9 +8,26 @@
     <script src="jquery-1.11.1.min.js" type="text/javascript"></script>
     <script type="text/javascript">
       var WS = new WebSocket("ws://localhost:8000");
+      function makeid() {
+        var text = "";
+        var possible =
+              "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+        for( var i=0; i < 8; i++ ) {
+          text += possible.charAt(Math.floor(Math.random() *
+          possible.length));
+        }
+
+        return text;
+      }
+      function _be(s) {
+        return "^"+s+"$"
+      }
+      var MY_NAME = makeid();
       WS.onopen = function() {
         out = []
         append_standard_graphical_queries(out);
+        out = {client:MY_NAME, sql:out, 'return': _be(MY_NAME), subsequent:"draw"};
         WS.send(JSON.stringify(out));
       }
       function s_(v) {
@@ -22,11 +39,8 @@
       function st_y(v) {
         return s_(v) + 30;
       }
-      var PREV = 8;
-      var PREV_PREV = 7;
-      var GLOBAL_NOTE_ADD_KLUDGE = 10;
       function build_simple_insert(table, dct) {
-        console.log(table, dct);
+        //console.log(table, dct);
         var keys = []
         for (var key in dct) {
           keys.push(key)
@@ -42,49 +56,81 @@
         stmt += ");"
         return stmt;
       }
-      function addNote() {
-        out = []
+      function increment_last_used_item() {
+          return "INSERT INTO used_ids (id) SELECT max(used_ids.id) + 1 FROM used_ids;";
+      }
+      function get_last_used_item() {
+          return "SELECT max(used_ids.id) FROM used_ids;";
+      }
+      function addNote_1() {
+        var out = [];
         out.push({
           expected : [],
-          sql : "DELETE FROM graphical_next WHERE graphical_next.id = "+PREV+";" 
+          sql : increment_last_used_item()
+        });
+        out.push({
+          name : 'next',
+          expected : ['id'],
+          sql : get_last_used_item()
+        });
+        out.push({
+          name : 'prev',
+          expected : ['id'],
+          sql : "SELECT graphical_next.id FROM graphical_next WHERE graphical_next.next IS NULL;"
+        });
+        out.push({
+          name : 'prev_prev',
+          expected : ['id'],
+          sql : "SELECT graphical_next.prev FROM graphical_next WHERE graphical_next.next IS NULL;"
+        });
+        out = {client:MY_NAME, sql:out, 'return': _be(MY_NAME), subsequent:"addNote_2"};
+        WS.send(JSON.stringify(out));
+      }
+      function addNote_2(data) {
+        console.log("data going to AN_2", data);
+        out = [];
+        var prev = data['prev'][0]['id'];
+        var prev_prev = data['prev_prev'][0]['id'];
+        var next = data['next'][0]['id'];
+        out.push({
+          expected : [],
+          sql : "DELETE FROM graphical_next WHERE graphical_next.id = "+prev+";" 
         });
         out.push({
           expected : [],
-          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+PREV+","+PREV_PREV+","+GLOBAL_NOTE_ADD_KLUDGE+");"
+          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+prev+","+prev_prev+","+next+");"
         });
         out.push({
           expected : [],
-          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+GLOBAL_NOTE_ADD_KLUDGE+","+PREV+",NULL);"
+          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+next+","+prev+",NULL);"
         });
         out.push({
           expected : [],
-          sql : build_simple_insert('name',{id:GLOBAL_NOTE_ADD_KLUDGE, val :
+          sql : build_simple_insert('name',{id:next, val :
           "'note'"})
         });
         out.push({
           expected : [],
-          sql : build_simple_insert('font_name',{id:GLOBAL_NOTE_ADD_KLUDGE,
+          sql : build_simple_insert('font_name',{id:next,
           val : "'Bravura'"})
         });
         out.push({
           expected : [],
-          sql : build_simple_insert('font_size',{id:GLOBAL_NOTE_ADD_KLUDGE, val : 20})
+          sql : build_simple_insert('font_size',{id:next, val : 20})
         });
         out.push({
           expected : [],
-          sql : build_simple_insert('duration_log',{id:GLOBAL_NOTE_ADD_KLUDGE,
+          sql : build_simple_insert('duration_log',{id:next,
           val : -3})
         });
         out.push({
           expected : [],
-          sql : build_simple_insert('staff_symbol',{id:GLOBAL_NOTE_ADD_KLUDGE,
+          sql : build_simple_insert('staff_symbol',{id:next,
           val : 9})
         });
-        PREV_PREV = PREV;
-        PREV = GLOBAL_NOTE_ADD_KLUDGE;
-        GLOBAL_NOTE_ADD_KLUDGE += 1;
         
         append_standard_graphical_queries(out);
+        out = {client:MY_NAME, sql:out, 'return': "*", subsequent: "draw"};
         ///////////////////////////
         WS.send(JSON.stringify(out));
       }
@@ -116,14 +162,23 @@
         });
       }
       WS.onmessage = function(evt) {
-        console.log(evt.data);
-        json = eval("("+evt.data+")");
-        console.log(json);
+        //console.log(evt.data);
+        //var json = eval("("+evt.data+")");
+        //console.log(json);
+        json = eval("("+evt.data+")")
+        var subsequent = json['subsequent'];
+        console.log("subs", json['subsequent']);
+        if (subsequent) {
+          eval(subsequent+"("+evt.data+")");
+        }
+      }
+      function draw(data) {
+        console.log("data going to draw", data)
         var canvas = $("#engraving")[0];
         var context = canvas.getContext('2d');
         context.clearRect(0,0,canvas.width, canvas.height);
-        for (var i = 0; i < json.line_stencil.length; i++) {
-          var line = json.line_stencil[i];
+        for (var i = 0; i < data.line_stencil.length; i++) {
+          var line = data.line_stencil[i];
           //console.log("making line", line);
           context.beginPath();
           var x = line['x_position'] ? line['x_position'] : 0.0;
@@ -134,8 +189,8 @@
           console.log("LW", context.lineWidth);
           context.stroke();
         }
-        for (var i = 0; i < json.glyph_stencil.length; i++) {
-          var glyph = json.glyph_stencil[i];
+        for (var i = 0; i < data.glyph_stencil.length; i++) {
+          var glyph = data.glyph_stencil[i];
           var x = glyph['x'] + (glyph['x_position'] ? glyph['x_position'] : 0.0);
           var y = glyph['y'] + (glyph['y_position'] ? glyph['y_position'] : 0.0);
           context.font = 'normal '+glyph['font_size']+'px '+glyph['font_name'];
@@ -151,6 +206,6 @@
   <body>
     <canvas id="engraving" width="1000" height="300">
     </canvas>
-    <div onclick="addNote()">click on me to add a note</div>
+    <div onclick="addNote_1()">click on me to add a note</div>
   </body>
 </html>

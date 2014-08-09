@@ -32,6 +32,7 @@ from sqlalchemy.exc import ResourceClosedError
 import json
 import time
 import sys
+import re
 
 ### websocket fun!
 from gevent import monkey; monkey.patch_all()
@@ -362,6 +363,9 @@ stmts.append((Staff_space, {'id':9, 'val':1.0}))
 for x in range(9) :
   stmts.append((Staff_symbol, {'id':x,'val':9}))
 
+for x in range(10) :
+  stmts.append((Used_ids, {'id':x}))
+
 # run!
 
 trans = CONN.begin()
@@ -430,15 +434,16 @@ httpd.server_close()
 print time.asctime(), "Server Stops - %s:%s" % (_HOST_NAME, _PORT_NUMBER)
 '''
 
-WSM = WebSocketManager()
+WSM = {}
 
 class Engraver(WebSocket) :
   def received_message(self, JSON) :
-    WSM.add(self)
-    #print JSON
     jobj = json.loads(str(JSON))
+    if self not in WSM.values() :
+      WSM[jobj['client']] = self
     out = {}
-    for obj in jobj :
+    for obj in jobj['sql'] :
+      print "evaluating :::", obj['sql']
       result = CONN.execute(text(obj['sql']))
       if obj['expected'] != [] :
         out[obj['name']] = []
@@ -447,8 +452,12 @@ class Engraver(WebSocket) :
           for x in range(len(row)) :
             to_append[obj['expected'][x]] = row[x]
           out[obj['name']].append(to_append)
-    for WS in WSM.websockets.itervalues() :
-      WS.send(json.dumps(out), False)
+      if jobj.has_key('subsequent') :
+        out['subsequent'] = jobj['subsequent']
+    for key in WSM.keys() :
+      if jobj.has_key('return') :
+        if (jobj['return'] == "*") or re.match(jobj['return'], key) :
+          WSM[key].send(json.dumps(out), False)
 
 server = WSGIServer((_HOST_NAME, _PORT_NUMBER), WebSocketWSGIApplication(handler_cls=Engraver))
 print time.asctime(), "Server Starts - %s:%s" % (_HOST_NAME, _PORT_NUMBER)

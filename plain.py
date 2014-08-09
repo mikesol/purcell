@@ -43,6 +43,9 @@ def make_table(name, tp, unique = False) :
 
 ##### tables
 
+Used_ids = Table('used_ids', _metadata,
+  Column('id', Integer, primary_key = True));
+
 Log_table = Table('log_table', _metadata,
   Column('id', Integer, primary_key = True),
   Column('mom', Float),
@@ -71,11 +74,6 @@ String_box = Table('string_box', _metadata,
   Column('width', Integer),
   Column('height', Integer)
   )
-
-Key_signature_layout_info = Table('key_signature_layout_info', _metadata,
-  Column('accidental', Integer, primary_key = True),
-  Column('place', Float)
-)
 
 class JoinK(object) :
   def __init__(self, table) :
