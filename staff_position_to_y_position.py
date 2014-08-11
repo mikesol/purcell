@@ -8,14 +8,16 @@ from staff_transform import staff_transform
 
 class _Delete(DeleteStmt) :
   #def __init__(self, width, name) :
-  def __init__(self, y_position) :
+  def __init__(self, needle, name, y_position) :
     def where_clause_fn(id) :
-      return y_position.c.id == id
+      stmt = select([name.c.id]).where(and_(y_position.c.id == id, name.c.id == id, name.c.val == needle))
+      return exists(stmt)
     DeleteStmt.__init__(self, y_position, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, name, staff_position, staff_symbol, staff_space, y_position) :
+  def __init__(self, needle, name, staff_position, staff_symbol, staff_space, y_position) :
     InsertStmt.__init__(self)
+    self.needle = needle
     self.name = name
     self.staff_position = staff_position
     self.staff_symbol = staff_symbol
@@ -23,6 +25,7 @@ class _Insert(InsertStmt) :
     self.y_position = y_position
 
   def _generate_stmt(self, id) :
+    needle = self.needle
     name = self.name
     staff_position = self.staff_position
     staff_symbol = self.staff_symbol
@@ -32,7 +35,7 @@ class _Insert(InsertStmt) :
     clefs_to_y_positions = select([
       name.c.id.label('id'),
       (staff_transform(staff_position.c.val) * staff_space.c.val).label('val')
-    ]).where(and_(name.c.val == 'clef',
+    ]).where(and_(name.c.val == needle,
                   name.c.id == staff_position.c.id)).\
        where(staff_spaceize(name, staff_symbol, staff_space)).\
        where(safe_eq_comp(name.c.id, id)).\
@@ -42,13 +45,12 @@ class _Insert(InsertStmt) :
 
     self.insert = simple_insert(y_position, clefs_to_y_positions)
 
-def generate_ddl(name, staff_position, staff_symbol, staff_space, y_position) :
+def generate_ddl(needle, name, staff_position, staff_symbol, staff_space, y_position) :
   OUT = []
 
-  insert_stmt = _Insert(name, staff_position, staff_symbol, staff_space, y_position)
+  insert_stmt = _Insert(needle, name, staff_position, staff_symbol, staff_space, y_position)
 
-  #del_stmt = _Delete(y_position, name)
-  del_stmt = _Delete(y_position)
+  del_stmt = _Delete(needle, name, y_position)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
@@ -70,7 +72,8 @@ if __name__ == "__main__" :
   conn = engine.connect()
   generate_sqlite_functions(conn)
 
-  manager = DDL_manager(generate_ddl(name = Name,
+  manager = DDL_manager(generate_ddl(needle = 'clef',
+                                     name = Name,
                                      staff_position = Staff_position,
                                      staff_symbol = Staff_symbol,
                                      staff_space = Staff_space,

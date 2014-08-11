@@ -1,7 +1,7 @@
 import tuplet_to_factor
 import rhythmic_events_to_durations
 import clef_to_width
-import clef_to_y_position
+import staff_position_to_y_position
 import key_signature_to_width
 import time_signature_to_width
 import accidental_to_width
@@ -12,12 +12,21 @@ import nexts_to_graphical_next
 import graphical_next_to_space_prev
 import space_prev_to_x_position
 import duration_log_to_dimension
+import note_head_to_staff_position
+import ledger_line_to_line_stencil
+import note_head_to_ledger_line
+import duration_log_to_stem_length
+import duration_log_to_stem_direction
+import stem_direction_to_stem_x_offset
+import stem_to_line_stencil
+import stem_to_stem_end
 
 import staff_symbol_to_stencil
 import clef_to_stencil
 import time_signature_to_stencil
 import key_signature_to_stencil
 import duration_log_to_stencil
+import duration_log_to_flag_stencil
 
 import bravura_tools
 import simple_http_server
@@ -57,6 +66,8 @@ TUPLET_TO_FACTOR = T
 RHYTHMIC_EVENTS_TO_DURATIONS = T
 CLEF_TO_WIDTH = T
 CLEF_TO_Y_POSITION = T
+NOTE_HEAD_TO_STAFF_POSITION = T
+NOTE_HEAD_TO_Y_POSITION = T
 KEY_SIGNATURE_TO_WIDTH = T
 TIME_SIGNATURE_TO_WIDTH = T
 ACCIDENTAL_TO_WIDTH = T
@@ -73,6 +84,14 @@ CLEF_TO_STENCIL = T
 TIME_SIGNATURE_TO_STENCIL = T
 KEY_SIGNATURE_TO_STENCIL = T
 DURATION_LOG_TO_STENCIL = T
+LEDGER_LINE_TO_LINE_STENCIL = T
+NOTE_HEAD_TO_LEDGER_LINE = T
+DURATION_LOG_TO_STEM_LENGTH = T
+DURATION_LOG_TO_STEM_DIRECTION = T
+STEM_DIRECTION_TO_STEM_X_OFFSET = T
+STEM_TO_STEM_END = T
+STEM_TO_LINE_STENCIL = T
+DURATION_LOG_TO_FLAG_STENCIL = T
 
 #engine = create_engine('postgresql://localhost/postgres', echo=False)
 engine = create_engine('sqlite:///memory', echo=ECHO)
@@ -108,12 +127,59 @@ if KEY_SIGNATURE_TO_WIDTH :
                                      glyph_box = Glyph_box,
                                      width = Width)
 
+###############################
 if CLEF_TO_Y_POSITION :
-  manager.ddls += clef_to_y_position.generate_ddl(name = Name,
+  manager.ddls += staff_position_to_y_position.generate_ddl(needle='clef',
+                                     name = Name,
                                      staff_position = Staff_position,
                                      staff_symbol = Staff_symbol,
                                      staff_space = Staff_space,
                                      y_position = Y_position)
+
+###############################
+if NOTE_HEAD_TO_STAFF_POSITION :
+  manager.ddls += note_head_to_staff_position.generate_ddl(name = Name,
+                                     pitch = Pitch,
+                                     octave = Octave,
+                                     graphical_next = Graphical_next,
+                                     staff_position = Staff_position)
+
+###############################
+if NOTE_HEAD_TO_Y_POSITION :
+  manager.ddls += staff_position_to_y_position.generate_ddl(needle='note',
+                                     name = Name,
+                                     staff_position = Staff_position,
+                                     staff_symbol = Staff_symbol,
+                                     staff_space = Staff_space,
+                                     y_position = Y_position)
+
+############################
+if DURATION_LOG_TO_STEM_LENGTH :
+  manager.ddls += duration_log_to_stem_length.generate_ddl(
+                                     duration_log = Duration_log,
+                                     name = Name,
+                                     stem_length = Stem_length)
+
+#######################
+if DURATION_LOG_TO_STEM_DIRECTION :
+  manager.ddls += duration_log_to_stem_direction.generate_ddl(staff_position = Staff_position,
+                                     stem_length = Stem_length,
+                                     stem_direction = Stem_direction)
+
+#######################
+if STEM_DIRECTION_TO_STEM_X_OFFSET :
+  manager.ddls += stem_direction_to_stem_x_offset.generate_ddl(note_head_width = Note_head_width,
+                                stem_direction=  Stem_direction,
+                                stem_x_offset = Stem_x_offset)
+
+###############################
+if STEM_TO_STEM_END :
+  manager.ddls += stem_to_stem_end.generate_ddl(
+                                     stem_direction = Stem_direction,
+                                     stem_length = Stem_length,
+                                     staff_symbol = Staff_symbol,
+                                     staff_space = Staff_space,
+                                     stem_end = Stem_end)
 
 ###############################
 if CLEF_TO_WIDTH : 
@@ -254,6 +320,41 @@ if DURATION_LOG_TO_STENCIL :
                                      name = Name,
                                      glyph_stencil = Glyph_stencil)
 
+###############################
+if DURATION_LOG_TO_FLAG_STENCIL :
+  manager.ddls += duration_log_to_flag_stencil.generate_ddl(font_name = Font_name,
+                                     font_size = Font_size,
+                                     duration_log = Duration_log,
+                                     stem_x_offset = Stem_x_offset,
+                                     stem_end = Stem_end,
+                                     stem_direction = Stem_direction, 
+                                     glyph_stencil = Glyph_stencil)
+
+###############################
+if STEM_TO_LINE_STENCIL :
+  manager.ddls += stem_to_line_stencil.generate_ddl(
+                                     stem_x_offset = Stem_x_offset,
+                                     stem_end = Stem_end,
+                                     line_stencil = Line_stencil)
+
+###############################
+if LEDGER_LINE_TO_LINE_STENCIL :
+  manager.ddls += ledger_line_to_line_stencil.generate_ddl(name = Name,
+                                     ledger_line = Ledger_line,
+                                     n_lines = N_lines,
+                                     staff_space = Staff_space,
+                                     staff_symbol = Staff_symbol,
+                                     note_head_width = Note_head_width,
+                                     y_position = Y_position,
+                                     line_stencil = Line_stencil)
+
+###############################
+if NOTE_HEAD_TO_LEDGER_LINE :
+  manager.ddls += note_head_to_ledger_line.generate_ddl(name = Name,
+                                     staff_position = Staff_position,
+                                     ledger_line = Ledger_line)
+
+
 if not MANUAL_DDL :
   manager.register_ddls(CONN, LOG = True)
 
@@ -297,6 +398,8 @@ stmts.append((Font_name, {'id':2,'val':'Bravura'}))
 stmts.append((Font_size, {'id':2,'val':20}))
 stmts.append((Unicode, {'id':2,'val':"U+E050"}))
 stmts.append((Staff_position, {'id':2,'val':-1.0}))
+stmts.append((Pitch, {'id':2,'val':4}))
+stmts.append((Octave, {'id':2,'val':0}))
 
 # some notes and rests
 stmts.append((Name, {'id':3,'val':'note'}))
@@ -305,6 +408,8 @@ stmts.append((Font_size, {'id':3,'val':20}))
 stmts.append((Duration_log, {'id':3,'val':-2}))
 stmts.append((Dots, {'id':3,'val':1}))
 stmts.append((Accidental, {'id':3,'val':-1}))
+stmts.append((Pitch, {'id':3,'val':1}))
+stmts.append((Octave, {'id':3,'val':2}))
 
 stmts.append((Name, {'id':4,'val':'rest'}))
 stmts.append((Font_name, {'id':4,'val':'Bravura'}))
@@ -316,6 +421,8 @@ stmts.append((Name, {'id':5,'val':'note'}))
 stmts.append((Font_name, {'id':5,'val':'Bravura'}))
 stmts.append((Font_size, {'id':5,'val':20}))
 stmts.append((Duration_log, {'id':5,'val':0}))
+stmts.append((Pitch, {'id':5,'val':4}))
+stmts.append((Octave, {'id':5,'val':0}))
 
 # another clef
 stmts.append((Name, {'id':6,'val':'clef'}))
@@ -323,6 +430,8 @@ stmts.append((Font_name, {'id':6,'val':'Bravura'}))
 stmts.append((Font_size, {'id':6,'val':20}))
 stmts.append((Unicode, {'id':6,'val':"U+E062"}))
 stmts.append((Staff_position, {'id':6,'val':1.0}))
+stmts.append((Pitch, {'id':6,'val':3}))
+stmts.append((Octave, {'id':6,'val':-1}))
 
 # some notes and rests
 stmts.append((Name, {'id':7,'val':'note'}))
@@ -331,6 +440,8 @@ stmts.append((Font_size, {'id':7,'val':20}))
 stmts.append((Duration_log, {'id':7,'val':-3}))
 stmts.append((Dots, {'id':7,'val':2}))
 stmts.append((Accidental, {'id':7,'val':1}))
+stmts.append((Pitch, {'id':7,'val':0}))
+stmts.append((Octave, {'id':7,'val':-2}))
 
 stmts.append((Name, {'id':8,'val':'rest'}))
 stmts.append((Font_name, {'id':8,'val':'Bravura'}))
@@ -379,8 +490,6 @@ trans.commit()
 #for row in CONN.execute(select([X_position])).fetchall() : print row
 #print "*"*80
 #for row in CONN.execute(select([Glyph_stencil])).fetchall() : print row
-
-#sys.exit(1)
 
 '''
 OUT = {}

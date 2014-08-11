@@ -8,6 +8,15 @@
     <script src="jquery-1.11.1.min.js" type="text/javascript"></script>
     <script type="text/javascript">
       var WS = new WebSocket("ws://localhost:8000");
+      var GLOBAL_NOTE = 0;
+      var GLOBAL_OCTAVE = -1;
+      function addNoteN(v) {
+        GLOBAL_NOTE = v;
+        addNote_1();
+      }
+      function changeOctave(v) {
+        GLOBAL_OCTAVE += v;
+      }
       function makeid() {
         var text = "";
         var possible =
@@ -128,6 +137,16 @@
           sql : build_simple_insert('staff_symbol',{id:next,
           val : 9})
         });
+        out.push({
+          expected : [],
+          sql : build_simple_insert('pitch',{id:next,
+          val : GLOBAL_NOTE})
+        });
+        out.push({
+          expected : [],
+          sql : build_simple_insert('octave',{id:next,
+          val : GLOBAL_OCTAVE})
+        });
         
         append_standard_graphical_queries(out);
         out = {client:MY_NAME, sql:out, 'return': "*", subsequent: "draw"};
@@ -179,7 +198,7 @@
         context.clearRect(0,0,canvas.width, canvas.height);
         for (var i = 0; i < data.line_stencil.length; i++) {
           var line = data.line_stencil[i];
-          //console.log("making line", line);
+          console.log("making line", line);
           context.beginPath();
           var x = line['x_position'] ? line['x_position'] : 0.0;
           var y = line['y_position'] ? line['y_position'] : 0.0;
@@ -206,6 +225,15 @@
   <body>
     <canvas id="engraving" width="1000" height="300">
     </canvas>
-    <div onclick="addNote_1()">click on me to add a note</div>
+    <div onclick="addNoteN(0)">click on me to add a C</div>
+    <div onclick="addNoteN(1)">click on me to add a D</div>
+    <div onclick="addNoteN(2)">click on me to add a E</div>
+    <div onclick="addNoteN(3)">click on me to add a F</div>
+    <div onclick="addNoteN(4)">click on me to add a G</div>
+    <div onclick="addNoteN(5)">click on me to add a A</div>
+    <div onclick="addNoteN(6)">click on me to add a B</div>
+    <div onclick="addNoteN(6)">click on me to add a B</div>
+    <div onclick="changeOctave(-1)">click on me to drop the octave</div>
+    <div onclick="changeOctave(1)">click on me to raise the octave</div>
   </body>
 </html>

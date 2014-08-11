@@ -344,6 +344,7 @@ class DDL_manager(object) :
         # uggghh
         for row in conn.execute(select([stmt.table]).where(stmt._whereclause)).fetchall() :
           ids.append(row[0])
+      ids = list(set(ids))
       self.generic_ddl(True, conn, stmt.table, ids, action)
       print "/// NOW DOING MAIN", action, "ON", stmt.table.name, "WITH IDS", ids
       if hasattr(stmt, 'parameters') :
@@ -354,6 +355,7 @@ class DDL_manager(object) :
         ids = []
         for row in conn.execute(select([stmt.table]).where(stmt._whereclause)).fetchall() :
           ids.append(row[0])
+      ids = list(set(ids))
       self.generic_ddl(False, conn, stmt.table, ids, action)
     else :
       conn.execute(stmt)

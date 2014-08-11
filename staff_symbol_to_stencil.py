@@ -12,10 +12,12 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
 class _Delete_XP(DeleteStmt) :
-  def __init__(self, line_stencil) :
+  def __init__(self, staff_space, line_stencil) :
     def where_clause_fn(id) :
       # uggghh
-      return line_stencil.c.id != 3.1416
+      stmt = select([staff_space.c.id]).where(and_(line_stencil.c.id == staff_space.c.id))
+      return exists(stmt)
+      #return line_stencil.c.id != 3.1416
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
 # UGGGGH always redraw
@@ -93,7 +95,7 @@ def generate_ddl(name, line_thickness, n_lines, staff_space, x_position, line_st
   insert_stmt = _Insert(name, line_thickness, n_lines, staff_space, x_position, line_stencil)
 
   #del_stmt = _Delete(line_stencil)
-  del_stmt_xp = _Delete_XP(line_stencil)
+  del_stmt_xp = _Delete_XP(staff_space, line_stencil)
 
   OUT += [DDL_unit(table, action, [del_stmt_xp], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']

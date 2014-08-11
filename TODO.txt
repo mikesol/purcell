@@ -1,0 +1,1 @@
+Fix problem with last note after clef change.

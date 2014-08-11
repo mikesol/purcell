@@ -73,6 +73,15 @@ Font_name = make_table('font_name', String)
 Font_size = make_table('font_size', Float)
 Unicode = make_table('unicode', Integer)
 
+# has a ledger line?
+Ledger_line = make_table('ledger_line', Integer)
+
+# length of stems
+Stem_length = make_table('stem_length', Float)
+Stem_direction = make_table('stem_direction', Integer)
+Stem_x_offset = make_table('stem_x_offset', Float)
+Stem_end = make_table('stem_end', Float)
+
 Note_head_width = make_table('note_head_width', Float)
 Note_head_height = make_table('note_head_height', Float)
 Dot_width = make_table('dot_width', Float)

@@ -7,7 +7,8 @@ import time
 class _Delete(DeleteStmt) :
   def __init__(self, glyph_stencil) :
     def where_clause_fn(id) :
-      return glyph_stencil.c.id == id
+      # 0 for note head
+      return and_(glyph_stencil.c.id == id, glyph_stencil.c.sub_id == 0)
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
