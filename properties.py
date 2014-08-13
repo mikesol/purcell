@@ -1,5 +1,6 @@
 from sqlalchemy import Integer, Float, String, Column
 from plain import make_table, make_table_generic, Fraction, Spanner
+import plain
 
 Score = make_table('score', Integer)
 Staff = make_table('staff', Integer)
@@ -102,58 +103,58 @@ Width = make_table('width', Float)
 Height = make_table('height', Float)
 
 Space_prev = make_table_generic('space_prev',
-  [Column('id', Integer, primary_key=True),
-   Column('prev',Integer), Column('val',Float),])
+  [Column('id', Integer, primary_key=True, index=plain._GLOBAL_INDEX),
+   Column('prev',Integer), Column('val',Float, index=plain._GLOBAL_INDEX),])
 
 X_position = make_table('x_position', Float)
 Y_position = make_table('y_position', Float)
 
 Graphical_next = make_table_generic('graphical_next', [
-      Column('id', Integer, primary_key = True),
-      Column('prev', Integer, unique = True),
-      Column('next', Integer, unique = True)])
+      Column('id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+      Column('prev', Integer, unique = True, index=plain._GLOBAL_INDEX),
+      Column('next', Integer, unique = True, index=plain._GLOBAL_INDEX)])
 
 Line_thickness = make_table('line_thickness', Float)
 Line_stencil = make_table_generic('line_stencil', [
-                     Column('id', Integer, primary_key = True),
-                     Column('writer', String, primary_key = True),
-                     Column('sub_id', Integer, primary_key = True),
-                     Column('x0', Float),
-                     Column('y0', Float),
-                     Column('x1', Float),
-                     Column('y1', Float),
-                     Column('thickness', Float)])
+                     Column('id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('writer', String, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('sub_id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('x0', Float, index=plain._GLOBAL_INDEX),
+                     Column('y0', Float, index=plain._GLOBAL_INDEX),
+                     Column('x1', Float, index=plain._GLOBAL_INDEX),
+                     Column('y1', Float, index=plain._GLOBAL_INDEX),
+                     Column('thickness', Float, index=plain._GLOBAL_INDEX)])
 
 # Staff symbol
 N_lines = make_table('n_lines', Integer)
 Staff_space = make_table('staff_space', Float)
 
-Glyph_stencil = make_table_generic('glyph_stencil', [Column('id', Integer, primary_key = True),
-                     Column('writer', String, primary_key = True),
-                     Column('sub_id', Integer, primary_key = True),
-                     Column('font_name', String),
-                     Column('font_size', Float),
-                     Column('unicode', String),
-                     Column('x', Float),
-                     Column('y', Float)])
+Glyph_stencil = make_table_generic('glyph_stencil', [Column('id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('writer', String, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('sub_id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('font_name', String, index=plain._GLOBAL_INDEX),
+                     Column('font_size', Float, index=plain._GLOBAL_INDEX),
+                     Column('unicode', String, index=plain._GLOBAL_INDEX),
+                     Column('x', Float, index=plain._GLOBAL_INDEX),
+                     Column('y', Float, index=plain._GLOBAL_INDEX)])
 
-Polygon_stencil = make_table_generic('polygon_stencil', [Column('id', Integer, primary_key = True),
-                     Column('writer', String, primary_key = True),
-                     Column('sub_id', Integer, primary_key = True),
-                     Column('point', Integer, primary_key = True),
-                     Column('x', Float),
-                     Column('y', Float),
-                     Column('thickness', Float),
-                     Column('fill', Integer),
-                     Column('stroke', Integer),
+Polygon_stencil = make_table_generic('polygon_stencil', [Column('id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('writer', String, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('sub_id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('point', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('x', Float, index=plain._GLOBAL_INDEX),
+                     Column('y', Float, index=plain._GLOBAL_INDEX),
+                     Column('thickness', Float, index=plain._GLOBAL_INDEX),
+                     Column('fill', Integer, index=plain._GLOBAL_INDEX),
+                     Column('stroke', Integer, index=plain._GLOBAL_INDEX),
                      ])
 
-String_stencil = make_table_generic('string_stencil', [Column('id', Integer, primary_key = True),
-                     Column('writer', String, primary_key = True),
-                     Column('sub_id', Integer, primary_key = True),
-                     Column('font_name', String),
-                     Column('font_size', Float),
-                     Column('str', String),
-                     Column('x', Float),
-                     Column('y', Float)
+String_stencil = make_table_generic('string_stencil', [Column('id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('writer', String, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('sub_id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),
+                     Column('font_name', String, index=plain._GLOBAL_INDEX),
+                     Column('font_size', Float, index=plain._GLOBAL_INDEX),
+                     Column('str', String, index=plain._GLOBAL_INDEX),
+                     Column('x', Float, index=plain._GLOBAL_INDEX),
+                     Column('y', Float, index=plain._GLOBAL_INDEX)
 ])

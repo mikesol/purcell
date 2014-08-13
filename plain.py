@@ -11,6 +11,7 @@ import math
 import transitive_reduction
 
 _GLOBAL_VERBOSE = False
+_GLOBAL_INDEX = True
 
 # i <3 you, randString!
 def _randString(length=16, chars=string.letters):
@@ -44,18 +45,18 @@ def make_table(name, tp, unique = False) :
   if tp == Fraction :
     # unique not possible
     return make_table_generic(name,
-                     [Column('id', Integer, primary_key = True),
-                     Column('num', Integer),
-                     Column('den', Integer)])
+                     [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
+                     Column('num', Integer, index=_GLOBAL_INDEX),
+                     Column('den', Integer, index=_GLOBAL_INDEX)])
   if tp == Spanner :
     # unique not possible
     return make_table_generic(name,
-                     [Column('id', Integer, primary_key = True),
-                     Column('left', Float),
-                     Column('right', Float)])
+                     [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
+                     Column('left', Float, index=_GLOBAL_INDEX),
+                     Column('right', Float, index=_GLOBAL_INDEX)])
   return Table(name, _metadata,
-                     Column('id', Integer, primary_key = True),
-                     Column('val', tp, unique = unique))
+                     Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
+                     Column('val', tp, unique = unique, index=_GLOBAL_INDEX))
 
 ##### tables
 

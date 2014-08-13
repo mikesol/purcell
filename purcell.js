@@ -26,28 +26,32 @@ purcell.shiftX = function(v) {
 }
 purcell.updateCurrentPitch = function() {
   $("#currentPitch").text("C D E F G A B R |".split(" ")[purcell.GLOBAL_NOTE]);
-  $("#currentPitch").css('border', "1px solid black").css('width',
-  "40px").css("display","inline-block").css("text-align","center");
+  $("#currentPitch").css('width',
+  "40px").css("display","inline-block").css("text-align","center").css("color","red");
 }
 purcell.updateCurrentRhythm = function() {
   $("#currentRhythm").text(['\ue1d2','\ue1d3','\ue1d5','\ue1d7',
      '\ue1d9','\ue1db','\ue1dd','\ue1df'][purcell.GLOBAL_DURATION * -1]);
-  $("#currentRhythm").css('border', "1px solid black").css('width',
-  "20px").css("display","inline-block").css("text-align","center");
+  $("#currentRhythm").css('font-family', 'Bravura').css('width',
+  "20px").css("display","inline-block").css("text-align","center").css("color","red");
 }
 purcell.updateCurrentAccidental = function() {
-  $("#currentAccidental").text(['\u0000','\ue260','\ue261','\ue262'
+  $("#currentAccidental").text(['\u25a1','\ue260','\ue261','\ue262'
      ][purcell.GLOBAL_ACCIDENTAL == null ?
      0 : purcell.GLOBAL_ACCIDENTAL + 2]);
-  $("#currentAccidental").css('border', "1px solid black").css('width',
-  "20px").css("display","inline-block").css("text-align","center");
+  $("#currentAccidental").css('font-family', 'Bravura').css('width',
+  "20px").css("display","inline-block").css("text-align","center").css("color","red");
 }
 purcell.updateCurrentOctave = function() {
   $("#currentOctave").text(purcell.GLOBAL_OCTAVE);
-  $("#currentOctave").css('border', "1px solid black").css('width',
+  $("#currentOctave").css('width',
   "40px").css("display","inline-block").css("text-align","center");
 }
 purcell.addNoteN = function(v) {
+  if (purcell.s_(purcell.MAX_X) > 400) {
+    console.log("MAX-x,",purcell.s_(purcell.MAX_X));
+    purcell.GLOBAL_X_SHIFT = -1 * purcell.s_(purcell.MAX_X) + 400;
+  }
   purcell.GLOBAL_NOTE = v;
   purcell.updateCurrentPitch();
   purcell.increment_and_execute("purcell.addNote_2");
