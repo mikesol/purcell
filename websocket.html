@@ -5,498 +5,76 @@
       Engraving server test
     </title>
     <style type="text/css" src="fonts/stylesheet.css">
-      .pitch {
-        font-size:40px;
-        min-width:60px;
-      }
-      .octave {
-        font-size:20px;
-      }
-      .beam {
-        font-size:20px;
-      }
-      .duration {
-        font-family:Bravura;
-        font-size:20px;
-      }
-      .accidental {
-        font-family:Bravura;
-        font-size:20px;
-      }
-      .barline {
-        /*font-family:Bravura;
-        font-size:20px;*/
-        font-size:40px;
-      }
-      #webpage {
-        width : 1000px;
-        margin : 0 auto;
-      }
     </style>
     <script src="jquery-1.11.1.min.js" type="text/javascript"></script>
     <script src="spin.js" type="text/javascript"></script>
     <script src="jquery.spin.js" type="text/javascript"></script>
+    <script src="snap.svg-min.js" type="text/javascript"></script>
+    <script src="e101.js" type="text/javascript"></script>
+    <link href="editor-style.css" rel="stylesheet" type="text/css"></link>
     <script type="text/javascript">
-      var WS = null;
-      var GLOBAL_NOTE = 0;
-      var GLOBAL_OCTAVE = 0;
-      var GLOBAL_ACCIDENTAL = null;
-      var GLOBAL_BEAM = 10000;
-      var GLOBAL_BEAM_FLAG = false;
-      var GLOBAL_DURATION = -2;
-      var GLOBAL_X_SHIFT = 30;
-      var MAX_X = 0;
-      function shiftX(v) {
-        if (v == null) {
-          GLOBAL_X_SHIFT = 30;
-        } else if (v == 3.1416) {
-          // uggh
-          GLOBAL_X_SHIFT = -1 * s_(MAX_X) + 400;
-        } else {
-          GLOBAL_X_SHIFT += v;
-        }
-        GLOBAL_X_SHIFT = Math.min(30, GLOBAL_X_SHIFT);
-        out = []
-        append_standard_graphical_queries(out);
-        out = {client:MY_NAME, sql:out, 'return': _be(MY_NAME), subsequent:"draw"};
-        WS.send(JSON.stringify(out));
-      }
-      function updateCurrentPitch() {
-        $("#currentPitch").text("C D E F G A B R |".split(" ")[GLOBAL_NOTE]);
-        $("#currentPitch").css('border', "1px solid black").css('width',
-        "40px").css("display","inline-block").css("text-align","center");
-      }
-      function updateCurrentRhythm() {
-        $("#currentRhythm").text(['\ue1d2','\ue1d3','\ue1d5','\ue1d7',
-           '\ue1d9','\ue1db','\ue1dd','\ue1df'][GLOBAL_DURATION * -1]);
-        $("#currentRhythm").css('border', "1px solid black").css('width',
-        "20px").css("display","inline-block").css("text-align","center");
-      }
-      function updateCurrentAccidental() {
-        $("#currentAccidental").text(['\u0000','\ue260','\ue261','\ue262'
-           ][GLOBAL_ACCIDENTAL == null ?
-           0 : GLOBAL_ACCIDENTAL + 2]);
-        $("#currentAccidental").css('border', "1px solid black").css('width',
-        "20px").css("display","inline-block").css("text-align","center");
-      }
-      function updateCurrentOctave() {
-        $("#currentOctave").text(GLOBAL_OCTAVE);
-        $("#currentOctave").css('border', "1px solid black").css('width',
-        "40px").css("display","inline-block").css("text-align","center");
-      }
-      function addNoteN(v) {
-        GLOBAL_NOTE = v;
-        updateCurrentPitch();
-        increment_and_execute("addNote_2");
-        $('#spinny').spin(); // Creates a default Spinner using the text color
-      }
-      function addBarLineN() {
-        increment_and_execute("addBarLine");
-        $('#spinny').spin(); // Creates a default Spinner using the text color
-      }
-      function changeDuration(v) {
-        GLOBAL_DURATION = v;
-        updateCurrentRhythm();
-      }
-      function changeAccidental(v) {
-        GLOBAL_ACCIDENTAL = v;
-        updateCurrentAccidental();
-      }
-      function changeOctave(v) {
-        GLOBAL_OCTAVE += v;
-        updateCurrentOctave();
-      }
-      function beamOn() {
-        GLOBAL_BEAM_FLAG = true;
-      }
-      function beamOff() {
-        GLOBAL_BEAM_FLAG = false;
-        GLOBAL_BEAM += 1;
-      }
-      function makeid() {
-        var text = "";
-        var possible =
-              "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-        for( var i=0; i < 8; i++ ) {
-          text += possible.charAt(Math.floor(Math.random() *
-          possible.length));
-        }
-
-        return text;
-      }
-      function _be(s) {
-        return "^"+s+"$"
-      }
-      var MY_NAME = makeid();
-      function s_(v) {
-        return 4.0 * v;
-      }
-      function st_x(v) {
-        return s_(v) + GLOBAL_X_SHIFT;
-      }
-      function st_y(v) {
-        return s_(v) + 30;
-      }
-      function build_simple_insert(table, dct) {
-        //console.log(table, dct);
-        var keys = []
-        for (var key in dct) {
-          keys.push(key)
-        }
-        var stmt = "INSERT INTO "+table+" ("
-        stmt += keys.join();
-        stmt += ") VALUES ("
-        var vals = [];
-        for (var i = 0 ; i < keys.length; i++) {
-          vals.push(dct[keys[i]]);
-        }
-        stmt += vals.join();
-        stmt += ");"
-        return stmt;
-      }
-      function increment_last_used_item() {
-          return "INSERT INTO used_ids (id) SELECT max(used_ids.id) + 1 FROM used_ids;";
-      }
-      function get_last_used_item() {
-          return "SELECT max(used_ids.id) FROM used_ids;";
-      }
-      function increment_and_execute(subsequent) {
-        var out = [];
-        out.push({
-          expected : [],
-          sql : increment_last_used_item()
-        });
-        out.push({
-          name : 'next',
-          expected : ['id'],
-          sql : get_last_used_item()
-        });
-        out.push({
-          name : 'prev',
-          expected : ['id'],
-          sql : "SELECT graphical_next.id FROM graphical_next WHERE graphical_next.next IS NULL;"
-        });
-        out.push({
-          name : 'prev_prev',
-          expected : ['id'],
-          sql : "SELECT graphical_next.prev FROM graphical_next WHERE graphical_next.next IS NULL;"
-        });
-        out = {client:MY_NAME, sql:out, 'return': _be(MY_NAME), subsequent: subsequent};
-        WS.send(JSON.stringify(out));
-      }
-      function addNote_2(data) {
-        console.log("data going to AN_2", data);
-        out = [];
-        var prev = data['prev'][0]['id'];
-        var prev_prev = data['prev_prev'][0]['id'];
-        var next = data['next'][0]['id'];
-        out.push({
-          expected : [],
-          sql : build_simple_insert('name',{id:next, val :
-          GLOBAL_NOTE == null ? "'rest'" : "'note'"})
-        });
-        out.push({
-          expected : [],
-          sql : build_simple_insert('font_name',{id:next,
-          val : "'Bravura'"})
-        });
-        out.push({
-          expected : [],
-          sql : build_simple_insert('font_size',{id:next, val : 20})
-        });
-        out.push({
-          expected : [],
-          sql : build_simple_insert('duration_log',{id:next,
-          // hmmm...
-          val : GLOBAL_DURATION})
-        });
-        out.push({
-          expected : [],
-          sql : build_simple_insert('staff_symbol',{id:next,
-          val : 1})
-        });
-        if (GLOBAL_NOTE != null) {
-          if (GLOBAL_ACCIDENTAL != null) {
-            out.push({
-              expected : [],
-              sql : build_simple_insert('accidental',{id:next,
-              val : GLOBAL_ACCIDENTAL})
-            });
-          }
-          out.push({
-            expected : [],
-            sql : build_simple_insert('pitch',{id:next,
-            val : GLOBAL_NOTE})
-          });
-          out.push({
-            expected : [],
-            sql : build_simple_insert('octave',{id:next,
-            val : GLOBAL_OCTAVE})
-          });
-          // testing for beams!
-          if (GLOBAL_BEAM_FLAG) {
-            out.push({
-              expected : [],
-              sql : build_simple_insert('beam',{id:next,
-              // ugh, for now just 5000...
-              val : GLOBAL_BEAM})
-            });
-          }
-        }
-        out.push({
-          expected : [],
-          sql : "DELETE FROM graphical_next WHERE graphical_next.id = "+prev+";" 
-        });
-        out.push({
-          expected : [],
-          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+prev+","+prev_prev+","+next+");"
-        });
-        out.push({
-          expected : [],
-          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+next+","+prev+",NULL);"
-        });
-        append_standard_graphical_queries(out);
-        out = {client:MY_NAME, sql:out, 'return': "*", subsequent: "draw"};
-        ///////////////////////////
-        WS.send(JSON.stringify(out));
-      }
-      function addBarLine(data) {
-        console.log("data going to adBarLine", data);
-        out = [];
-        var prev = data['prev'][0]['id'];
-        var prev_prev = data['prev_prev'][0]['id'];
-        var next = data['next'][0]['id'];
-        out.push({
-          expected : [],
-          sql : build_simple_insert('name',{id:next, val :
-          "'bar_line'"})
-        });
-        out.push({
-          expected : [],
-          sql : build_simple_insert('bar_thickness',{id:next, val : 0.20})
-        });
-        out.push({
-          expected : [],
-          sql : build_simple_insert('staff_symbol',{id:next,
-          val : 1})
-        });
-        out.push({
-          expected : [],
-          sql : "DELETE FROM graphical_next WHERE graphical_next.id = "+prev+";" 
-        });
-        out.push({
-          expected : [],
-          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+prev+","+prev_prev+","+next+");"
-        });
-        out.push({
-          expected : [],
-          sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+next+","+prev+",NULL);"
-        });
-        append_standard_graphical_queries(out);
-        out = {client:MY_NAME, sql:out, 'return': "*", subsequent: "draw"};
-        ///////////////////////////
-        WS.send(JSON.stringify(out));
-      }
-      function table_to_columns(name) {
-        if (name == "line_stencil") {
-          return "line_stencil.id, line_stencil.x0, line_stencil.y0, line_stencil.x1, line_stencil.y1, line_stencil.thickness";
-        } else if (name == "glyph_stencil") {
-          return "glyph_stencil.id, glyph_stencil.font_name, glyph_stencil.font_size, glyph_stencil.unicode, glyph_stencil.x, glyph_stencil.y";
-        } else if (name == "polygon_stencil") {
-          return "polygon_stencil.id, polygon_stencil.sub_id, polygon_stencil.point, polygon_stencil.x, polygon_stencil.y, polygon_stencil.thickness, polygon_stencil.stroke, polygon_stencil.fill";
-        }
-      }
-      function stencil_sql_request(name) {
-        var out = "SELECT " + table_to_columns(name) + ", x_position.val, y_position.val FROM " + name + " LEFT JOIN x_position ON " + name + ".id = x_position.id LEFT JOIN y_position ON " + name + ".id = y_position.id";
-        return out + ";"
-      }
-      function append_standard_graphical_queries(out) {
-        out.push({
-          name : 'line_stencil',
-          expected : ['id', 'x0', 'y0',
-          'x1', 'y1', 'thickness',
-          'x_position', 'y_position'],
-          sql : stencil_sql_request('line_stencil')
-        });
-        out.push({
-          name : 'glyph_stencil',
-          expected : ['id', 'font_name', 'font_size',
-          'unicode', 'x', 'y',
-          'x_position', 'y_position'],
-          sql : stencil_sql_request('glyph_stencil')
-        });
-        out.push({
-          name : 'polygon_stencil',
-          expected : ['id', 'sub_id', 'point',
-          'x', 'y',
-          'thickness', 'stroke', 'fill',
-          'x_position','y_position'],
-          sql : stencil_sql_request('polygon_stencil')
-        });
-        out.push({
-          name : 'max_x',
-          expected : ['x'],
-          sql : "SELECT max(x_position.val) FROM x_position;"
-        });
-      }
-      function draw(data) {
-        console.log("data going to draw", data)
-        var canvas = $("#engraving")[0];
-        var context = canvas.getContext('2d');
-        context.clearRect(0,0,canvas.width, canvas.height);
-        MAX_X = data.max_x[0]['x'];
-        for (var i = 0; i < data.line_stencil.length; i++) {
-          var line = data.line_stencil[i];
-          console.log("making line", line);
-          context.beginPath();
-          var x = line['x_position'] ? line['x_position'] : 0.0;
-          var y = line['y_position'] ? line['y_position'] : 0.0;
-          context.moveTo(st_x(line['x0'] + x), st_y(line['y0'] + y));
-          context.lineTo(st_x(line['x1'] + x), st_y(line['y1'] + y));
-          context.lineWidth = s_(line['thickness']);
-          console.log("LW", context.lineWidth);
-          context.stroke();
-        }
-        for (var i = 0; i < data.glyph_stencil.length; i++) {
-          var glyph = data.glyph_stencil[i];
-          var x = glyph['x'] + (glyph['x_position'] ? glyph['x_position'] : 0.0);
-          var y = glyph['y'] + (glyph['y_position'] ? glyph['y_position'] : 0.0);
-          context.font = 'normal '+glyph['font_size']+'px '+glyph['font_name'];
-          uc = String.fromCharCode(parseInt(glyph['unicode'].substr(2), 16));
-          //console.log(context.font, glyph[3], uc);
-          context.fillText(uc, st_x(x), st_y(y));
-        }
-        var polygon_holder = {};
-        for (var i = 0; i < data.polygon_stencil.length; i++) {
-          var polygon = data.polygon_stencil[i];
-          console.log("PG",polygon);
-          if (!polygon_holder[polygon['id']]) {
-            polygon_holder[polygon['id']] = {};
-          }
-          if (!polygon_holder[polygon['id']][polygon['sub_id']]) {
-            console.log("making sub", polygon['sub_id']);
-            polygon_holder[polygon['id']][polygon['sub_id']] = [];
-          }
-          polygon_holder[polygon['id']][polygon['sub_id']].push(polygon);
-        }
-        console.log("PH", polygon_holder);
-        for (key in polygon_holder) {
-          for (sub_key in polygon_holder[key]) {
-            // first, we sort in point order
-            console.log("before sorting", polygon_holder[key][sub_key])
-            polygon_holder[key][sub_key].sort(function(a,b)
-              {
-                return a['point'] - b['point'];
-              });
-            console.log("after sorting", polygon_holder[key][sub_key])
-            // then, iterate
-            context.beginPath();
-            for (var i = 0; i < polygon_holder[key][sub_key].length; i++) {
-              console.log(i == 0 ? 'moveTo' : 'lineTo',st_x(polygon_holder[key][sub_key][i].x),
-                   st_y(polygon_holder[key][sub_key][i].y),
-                   polygon_holder[key][sub_key][i].x,
-                   polygon_holder[key][sub_key][i].y);
-              context[i == 0 ? 'moveTo' : 'lineTo'](
-                   st_x(polygon_holder[key][sub_key][i].x),
-                   st_y(polygon_holder[key][sub_key][i].y)
-              );
-            }
-            //context.closePath();
-            if (polygon_holder[key][sub_key][0].fill == 1) {
-              context.fill();
-            }
-            if (polygon_holder[key][sub_key][0].stroke == 1) {
-              context.lineWidth = s_(polygon_holder[key][sub_key][0].thickness);
-              context.stroke();
-            }
-          }
-        }
-        console.log(MAX_X)
-        $('#spinny').spin(false); // Stops and removes the spinner.
-      }
       $(document).ready(function() {
-        WS = new WebSocket("ws://localhost:8000");
-        WS.onopen = function() {
-          out = []
-          append_standard_graphical_queries(out);
-          out = {client:MY_NAME, sql:out, 'return': _be(MY_NAME), subsequent:"draw"};
-          WS.send(JSON.stringify(out));
-        }
-        WS.onmessage = function(evt) {
-          //console.log(evt.data);
-          //var json = eval("("+evt.data+")");
-          //console.log(json);
-          json = eval("("+evt.data+")")
-          var subsequent = json['subsequent'];
-          console.log("subs", json['subsequent']);
-          if (subsequent) {
-            eval(subsequent+"("+evt.data+")");
-          }
-        }
-        updateCurrentPitch();
-        updateCurrentRhythm();
-        updateCurrentAccidental();
-        updateCurrentOctave();
+        e101.initialize();
       });
     </script>
   </head>
   <body>
     <div id="webpage">
       <div>
-        <button class="pitch" onclick="shiftX(null)">&#8635;</button>
-        <button class="pitch" onclick="shiftX(90)">&#8606;</button>
-        <button class="pitch" onclick="shiftX(30)">&#8592;</button>
-        <button class="pitch" onclick="shiftX(-30)">&#8594;</button>
-        <button class="pitch" onclick="shiftX(-90)">&#8608;</button>
-        <button class="pitch" onclick="shiftX(3.1416)">&#8618;</button>
+        <button class="pitch" onclick="e101.shiftX(null)">&#8635;</button>
+        <button class="pitch" onclick="e101.shiftX(90)">&#8606;</button>
+        <button class="pitch" onclick="e101.shiftX(30)">&#8592;</button>
+        <button class="pitch" onclick="e101.shiftX(-30)">&#8594;</button>
+        <button class="pitch" onclick="e101.shiftX(-90)">&#8608;</button>
+        <button class="pitch" onclick="e101.shiftX(3.1416)">&#8618;</button>
       </div>
-      <canvas id="engraving" width="1000" height="100">
-      </canvas>
+      <!--<canvas id="engraving" width="1000" height="100">
+      </canvas>-->
+      <svg id="engraving" width="100%"></svg>
       <div id="spinny">
       </div>
       <div>
         <span class="pitch" class="bordered" id="currentPitch"></span>
-        <button class="pitch" onclick="addNoteN(0)">C</button>
-        <button class="pitch" onclick="addNoteN(1)">D</button>
-        <button class="pitch" onclick="addNoteN(2)">E</button>
-        <button class="pitch" onclick="addNoteN(3)">F</button>
-        <button class="pitch" onclick="addNoteN(4)">G</button>
-        <button class="pitch" onclick="addNoteN(5)">A</button>
-        <button class="pitch" onclick="addNoteN(6)">B</button>
-        <button class="pitch" onclick="addNoteN(null)">R</button>
-        <button class="barline" onclick="addBarLineN()">|</button>
+        <button class="pitch" onclick="e101.addNoteN(0)">C</button>
+        <button class="pitch" onclick="e101.addNoteN(1)">D</button>
+        <button class="pitch" onclick="e101.addNoteN(2)">E</button>
+        <button class="pitch" onclick="e101.addNoteN(3)">F</button>
+        <button class="pitch" onclick="e101.addNoteN(4)">G</button>
+        <button class="pitch" onclick="e101.addNoteN(5)">A</button>
+        <button class="pitch" onclick="e101.addNoteN(6)">B</button>
+        <button class="pitch" onclick="e101.addNoteN(null)">R</button>
+        <button class="barline" onclick="e101.addBarLineN()">|</button>
       </div>
       <hr>
       <div>
         <span class="duration" class="bordered" id="currentRhythm"></span>
-        <button class="duration" onclick="changeDuration(0)">&#xe1d2;</button>
-        <button class="duration" onclick="changeDuration(-1)">&#xe1d3;</button>
-        <button class="duration" onclick="changeDuration(-2)">&#xe1d5;</button>
-        <button class="duration" onclick="changeDuration(-3)">&#xe1d7;</button>
-        <button class="duration" onclick="changeDuration(-4)">&#xe1d9;</button>
-        <button class="duration" onclick="changeDuration(-5)">&#xe1db;</button>
-        <button class="duration" onclick="changeDuration(-6)">&#xe1dd;</button>
-        <button class="duration" onclick="changeDuration(-7)">&#xe1df;</button>
+        <button class="duration" onclick="e101.changeDuration(0)">&#xe1d2;</button>
+        <button class="duration" onclick="e101.changeDuration(-1)">&#xe1d3;</button>
+        <button class="duration" onclick="e101.changeDuration(-2)">&#xe1d5;</button>
+        <button class="duration" onclick="e101.changeDuration(-3)">&#xe1d7;</button>
+        <button class="duration" onclick="e101.changeDuration(-4)">&#xe1d9;</button>
+        <button class="duration" onclick="e101.changeDuration(-5)">&#xe1db;</button>
+        <button class="duration" onclick="e101.changeDuration(-6)">&#xe1dd;</button>
+        <button class="duration" onclick="e101.changeDuration(-7)">&#xe1df;</button>
       </div>
       <hr>
       <div>
         <span class="accidental" class="bordered" id="currentAccidental"></span>
-        <button class="accidental" onclick="changeAccidental(null)">&nbsp;</button>
-        <button class="accidental" onclick="changeAccidental(-1)">&#xe260;</button>
-        <button class="accidental" onclick="changeAccidental(0)">&#xe261;</button>
-        <button class="accidental" onclick="changeAccidental(1)">&#xe262;</button>
+        <button class="accidental" onclick="e101.changeAccidental(null)">&nbsp;</button>
+        <button class="accidental" onclick="e101.changeAccidental(-1)">&#xe260;</button>
+        <button class="accidental" onclick="e101.changeAccidental(0)">&#xe261;</button>
+        <button class="accidental" onclick="e101.changeAccidental(1)">&#xe262;</button>
       </div>
       <hr>
       <div>
         <span class="octave" class="bordered" id="currentOctave"></span>
-        <button class="octave" onclick="changeOctave(-1)">8vb</button>
-        <button class="octave" onclick="changeOctave(1)">8va</button>
+        <button class="octave" onclick="e101.changeOctave(-1)">8vb</button>
+        <button class="octave" onclick="e101.changeOctave(1)">8va</button>
       </div>
       <hr>
       <div>
-        <button class="beam" onclick="beamOn()">beam on</button>
-        <button class="beam" onclick="beamOff()">beam off</button>
+        <button class="beam" onclick="e101.beamOn()">beam on</button>
+        <button class="beam" onclick="e101.beamOff()">beam off</button>
       </div>
     </div>
   </body>
