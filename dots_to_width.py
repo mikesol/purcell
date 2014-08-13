@@ -37,12 +37,12 @@ class _Insert(InsertStmt) :
         case([(dot_padding.c.val != None, dot_padding.c.val)] , else_ = dot_padding_default.c.val) * (dots.c.val - 1)
       )).label('val')
     ]).select_from(dots.outerjoin(dot_padding, onclause = dots.c.id == dot_padding.c.id)).\
+       where(safe_eq_comp(dots.c.id, id)).\
         where(and_(dot_padding_default.c.id == -1,
                   dots.c.id == font_name.c.id,
                   dots.c.id == font_size.c.id,
                   font_name.c.val == glyph_box.c.name,
                   glyph_box.c.unicode == "U+E1E7")).\
-        where(safe_eq_comp(dots.c.id, id)).\
     cte(name='dots_to_dot_widths')
 
     self.register_stmt(dots_to_dot_widths)

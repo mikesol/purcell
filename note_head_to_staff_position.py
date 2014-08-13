@@ -70,9 +70,9 @@ class _InsertNote(InsertStmt) :
       graphical_next.c.prev.label('prev'),
       case([(clef_name.c.val == 'clef',1)], else_=0).label('is_clef')
     ]).select_from(graphical_next.outerjoin(clef_name, onclause=clef_name.c.id == graphical_next.c.prev)).\
+      where(safe_eq_comp(note_name.c.id, id)).\
       where(note_name.c.id == graphical_next.c.id).\
       where(note_name.c.val == 'note').\
-      where(safe_eq_comp(note_name.c.id, id)).\
        cte(name="clef_finder", recursive=True)
     
     self.register_stmt(clef_finder)
@@ -112,14 +112,14 @@ class _InsertNote(InsertStmt) :
     note_to_staff_position = select([
       note_pitch.c.id.label('id'),
       ((((note_pitch.c.val + (7 * note_octave.c.val)) - (clef_pitch.c.val + (7 * clef_octave.c.val))) / 2.0) + clef_staff_position.c.val).label('val'),
-    ]).select_from(clef_finder.\
-          join(clef_pitch, onclause=clef_finder.c.prev == clef_pitch.c.id).\
-          join(clef_octave, onclause=clef_pitch.c.id == clef_octave.c.id).\
-          join(clef_staff_position, onclause=clef_pitch.c.id == clef_staff_position.c.id)
-          ).\
+    ]).\
+       where(safe_eq_comp(note_pitch.c.id, id)).\
+       where(clef_finder.c.prev == clef_pitch.c.id).\
+       where(clef_pitch.c.id == clef_octave.c.id).\
        where(note_octave.c.id == note_pitch.c.id).\
+       where(clef_pitch.c.id == clef_staff_position.c.id).\
        where(clef_finder.c.is_clef == True).\
-       where(safe_eq_comp(note_pitch.c.id, id)).cte(name="note_to_staff_position")
+       cte(name="note_to_staff_position")
 
     self.register_stmt(note_to_staff_position)
 
@@ -156,9 +156,9 @@ class _InsertClef(InsertStmt) :
       graphical_next.c.next.label('next'),
       case([(last_clef_name.c.val == 'clef',1)], else_=0).label('is_clef')
     ]).select_from(graphical_next.outerjoin(last_clef_name, onclause=last_clef_name.c.id == graphical_next.c.next)).\
+      where(safe_eq_comp(first_clef_name.c.id, id)).\
       where(first_clef_name.c.id == graphical_next.c.id).\
       where(first_clef_name.c.val == 'clef').\
-      where(safe_eq_comp(first_clef_name.c.id, id)).\
        cte(name="notes_after_clef", recursive=True)
     
     self.register_stmt(notes_after_clef)
@@ -186,12 +186,13 @@ class _InsertClef(InsertStmt) :
     note_to_staff_position = select([
       just_notes.c.id.label('id'),
       ((((note_pitch.c.val + (7 * note_octave.c.val)) - (clef_pitch.c.val + (7 * clef_octave.c.val))) / 2.0) + clef_staff_position.c.val).label('val')
-    ]).select_from(just_notes.\
-          join(note_pitch, onclause=just_notes.c.id == note_pitch.c.id).\
-          join(note_octave, onclause=just_notes.c.id == note_octave.c.id)).\
+    ]).\
+       where(safe_eq_comp(clef_pitch.c.id, id)).\
+       where(just_notes.c.id == note_pitch.c.id).\
        where(clef_octave.c.id == clef_pitch.c.id).\
+       where(just_notes.c.id == note_octave.c.id).\
        where(clef_octave.c.id == clef_staff_position.c.id).\
-       where(safe_eq_comp(clef_pitch.c.id, id)).cte(name="note_to_staff_position")
+       cte(name="note_to_staff_position")
 
     self.register_stmt(note_to_staff_position)
 

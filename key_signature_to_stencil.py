@@ -53,13 +53,13 @@ class _Insert(InsertStmt) :
       literal(0).label('x'),
       case([(key_signature.c.val > 0, 2.0)],else_=0.0).label('y'),
     ]).\
+      where(safe_eq_comp(key_signature.c.id, id)).\
        where(and_(
                   name.c.val == 'key_signature',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == key_signature.c.id,
                   key_signature.c.val != 0)).\
-      where(safe_eq_comp(key_signature.c.id, id)).\
          cte(name="key_signature_to_stencil", recursive=True)
 
     self.register_stmt(key_signature_to_stencil_head)

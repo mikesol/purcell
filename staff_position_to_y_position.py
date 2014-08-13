@@ -30,8 +30,8 @@ class _Insert(InsertStmt) :
     clefs_to_y_positions = select([
       staff_position.c.id.label('id'),
       (staff_transform(staff_position.c.val) * staff_space.c.val).label('val')
-    ]).where(staff_spaceize(staff_position, staff_symbol, staff_space)).\
-       where(safe_eq_comp(staff_position.c.id, id)).\
+    ]).where(safe_eq_comp(staff_position.c.id, id)).\
+    where(staff_spaceize(staff_position, staff_symbol, staff_space)).\
     cte(name='clefs_to_y_positions')
 
     self.register_stmt(clefs_to_y_positions)

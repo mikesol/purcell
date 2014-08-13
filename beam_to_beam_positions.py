@@ -213,7 +213,8 @@ if __name__ == "__main__" :
   from sqlalchemy import create_engine
   from sqlalchemy import event, DDL
   
-  ECHO = True
+  #ECHO = True
+  ECHO = False
   #MANUAL_DDL = True
   MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
@@ -248,16 +249,21 @@ if __name__ == "__main__" :
 
   stmts = []
 
-  PLACES = [-1.0,4.0,3.0,-2.0,
-            -2.0,3.0,4.0,3.0,4.0,-1.0]
+  #PLACES = [-1.0,4.0,3.0,-2.0,
+  #          -2.0,3.0,4.0,3.0,4.0,-1.0]
 
-  for x in range(10) :
+  BEAM = 5000
+  for x in range(20) :
     stmts.append((Stem_direction, {'id':x, 'val': 1}))
     stmts.append((Natural_stem_end, {'id':x, 'val': 3.0}))
-    stmts.append((Staff_position, {'id':x, 'val': PLACES[x]}))
+    #stmts.append((Staff_position, {'id':x, 'val': PLACES[x]}))
+    stmts.append((Staff_position, {'id':x, 'val': x / 2.0}))
     stmts.append((X_position, {'id':x, 'val':x * 1.0}))
     stmts.append((Stem_x_offset, {'id':x, 'val':0.2}))
-    stmts.append((Beam, {'id':x, 'val': 10 if x < 4 else 11}))
+    if (x / 4) % 2 == 0 :
+      stmts.append((Beam, {'id':x, 'val': BEAM }))
+    else :
+      BEAM += 1
     
   trans = conn.begin()
   for st in stmts :

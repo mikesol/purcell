@@ -4,11 +4,12 @@ purcell.$nap = null;
 purcell.GLOBAL_NOTE = 0;
 purcell.GLOBAL_OCTAVE = 0;
 purcell.GLOBAL_ACCIDENTAL = null;
-purcell.GLOBAL_BEAM = 10000;
+purcell.GLOBAL_BEAM = null;
 purcell.GLOBAL_BEAM_FLAG = false;
 purcell.GLOBAL_DURATION = -2;
 purcell.GLOBAL_X_SHIFT = 30;
 purcell.MAX_X = 0;
+purcell.CURRENT_DATA = null;
 purcell.shiftX = function(v) {
   if (v == null) {
     purcell.GLOBAL_X_SHIFT = 30;
@@ -45,7 +46,12 @@ purcell.updateCurrentAccidental = function() {
 purcell.updateCurrentOctave = function() {
   $("#currentOctave").text(purcell.GLOBAL_OCTAVE);
   $("#currentOctave").css('width',
-  "40px").css("display","inline-block").css("text-align","center");
+  "40px").css("display","inline-block").css("text-align","center").css("color","red");
+}
+purcell.updateCurrentBeam = function() {
+  $("#currentBeam").text(purcell.GLOBAL_BEAM_FLAG ? "ON" : "OFF");
+  $("#currentBeam").css('width',
+  "80px").css("display","inline-block").css("text-align","center").css("color","red");
 }
 purcell.addNoteN = function(v) {
   if (purcell.s_(purcell.MAX_X) > 400) {
@@ -75,10 +81,30 @@ purcell.changeOctave = function(v) {
 }
 purcell.beamOn = function() {
   purcell.GLOBAL_BEAM_FLAG = true;
+  purcell.updateCurrentBeam();
+  if (!purcell.GLOBAL_BEAM) {
+    out = [];
+    out.push({
+      expected : [],
+      sql : purcell.increment_last_used_item()
+    });
+    out.push({
+      name : 'beam',
+      expected : ['id'],
+      sql : purcell.get_last_used_item()
+    });
+  }
+  out = {client:purcell.MY_NAME, sql:out, 'return': purcell._be(purcell.MY_NAME), subsequent:"purcell.registerBeam"};
+  purcell.WS.send(JSON.stringify(out));
+}
+purcell.registerBeam = function(data) {
+  console.log("REG BEAM", data);
+  purcell.GLOBAL_BEAM = data.beam[0]['id'];
 }
 purcell.beamOff = function() {
   purcell.GLOBAL_BEAM_FLAG = false;
-  purcell.GLOBAL_BEAM += 1;
+  purcell.GLOBAL_BEAM = null;
+  purcell.updateCurrentBeam();
 }
 purcell.makeid = function() {
   var text = "";
@@ -127,6 +153,7 @@ purcell.increment_last_used_item = function() {
 purcell.get_last_used_item = function() {
     return "SELECT max(used_ids.id) FROM used_ids;";
 }
+
 purcell.increment_and_execute = function(subsequent) {
   var out = [];
   out.push({
@@ -138,6 +165,7 @@ purcell.increment_and_execute = function(subsequent) {
     expected : ['id'],
     sql : purcell.get_last_used_item()
   });
+  
   out.push({
     name : 'prev',
     expected : ['id'],
@@ -151,6 +179,7 @@ purcell.increment_and_execute = function(subsequent) {
   out = {client:purcell.MY_NAME, sql:out, 'return': purcell._be(purcell.MY_NAME), subsequent: subsequent};
   purcell.WS.send(JSON.stringify(out));
 }
+
 purcell.addNote_2 = function(data) {
   console.log("data going to AN_2", data);
   out = [];
@@ -333,6 +362,42 @@ purcell.draw = function(data) {
       "font-size" : glyph['font_size']
     });
   }
+  var polygon_holder = {};
+  for (var i = 0; i < data.polygon_stencil.length; i++) {
+    var polygon = data.polygon_stencil[i];
+    console.log("PG",polygon);
+    if (!polygon_holder[polygon['id']]) {
+      polygon_holder[polygon['id']] = {};
+    }
+    if (!polygon_holder[polygon['id']][polygon['sub_id']]) {
+      console.log("making sub", polygon['sub_id']);
+      polygon_holder[polygon['id']][polygon['sub_id']] = [];
+    }
+    polygon_holder[polygon['id']][polygon['sub_id']].push(polygon);
+  }
+  console.log("PH", polygon_holder);
+  for (key in polygon_holder) {
+    for (sub_key in polygon_holder[key]) {
+      // first, we sort in point order
+      console.log("before sorting", polygon_holder[key][sub_key])
+      polygon_holder[key][sub_key].sort(function(a,b)
+        {
+          return a['point'] - b['point'];
+        });
+      console.log("after sorting", polygon_holder[key][sub_key])
+      // then, iterate
+      var path = "";
+      for (var i = 0; i < polygon_holder[key][sub_key].length; i++) {
+        path = path + ((i == 0 ? 'M' : 'L') + " " + purcell.st_x(polygon_holder[key][sub_key][i].x) + " " + purcell.st_y(polygon_holder[key][sub_key][i].y)+ " ");
+      }
+      var thick = polygon_holder[key][sub_key][0].thickness ? polygon_holder[key][sub_key][0].thickness : 0.0; 
+      _gr0up.path(path).attr({
+        fill : polygon_holder[key][sub_key][0].fill == 1 ? true : false,
+        stroke : 'black',
+        strokeWidth : polygon_holder[key][sub_key][0].stroke * thick
+      });
+    }
+  }
   $('#spinny').spin(false); // Stops and removes the spinner.
 }
 purcell.initialize = function() {
@@ -357,9 +422,11 @@ purcell.initialize = function() {
     if (subsequent) {
       eval(subsequent+"("+evt.data+")");
     }
+    purcell.CURRENT_DATA = evt.data;
   }
   purcell.updateCurrentPitch();
   purcell.updateCurrentRhythm();
   purcell.updateCurrentAccidental();
   purcell.updateCurrentOctave();
+  purcell.updateCurrentBeam();
 }

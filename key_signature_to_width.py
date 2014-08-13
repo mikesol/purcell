@@ -45,6 +45,7 @@ class _Insert(InsertStmt) :
        ) * font_size.c.val \
           / 20.0).label('val')
     ]).select_from(name.outerjoin(key_signature_inter_accidental_padding, onclause = name.c.id == key_signature_inter_accidental_padding.c.id)).\
+        where(safe_eq_comp(name.c.id, id)).\
           where(and_(name.c.val == 'key_signature',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
@@ -53,7 +54,6 @@ class _Insert(InsertStmt) :
                   key_signature_inter_accidental_padding_default.c.id == -1,
                   case([(key_signature.c.val > 0,  glyph_box.c.unicode == "U+E262")], else_ = glyph_box.c.unicode == "U+E260")
                   )).\
-        where(safe_eq_comp(name.c.id, id)).\
     cte(name='key_signatures_to_widths')
 
     self.register_stmt(key_signatures_to_widths)

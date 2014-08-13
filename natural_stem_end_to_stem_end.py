@@ -64,7 +64,8 @@ class _Insert(InsertStmt) :
       slope.c.beam.label('beam'),
       slope.c.slope.label('slope'),
       (beam_y_position.c.left - (slope.c.slope * beam_x_position.c.left)).label('offset')
-    ]).cte(name="slope_offset")
+    ]).where(beam_y_position.c.id == slope.c.beam).where(beam_x_position.c.id == slope.c.beam).\
+      cte(name="slope_offset")
 
     self.register_stmt(slope_offset)
 
@@ -78,8 +79,9 @@ class _Insert(InsertStmt) :
 
     if id_is_beam :
       natural_stem_end_to_stem_end = natural_stem_end_to_stem_end.\
+        where(safe_eq_comp(beam.c.val, id)).\
         where(natural_stem_end.c.id == beam.c.id).\
-        where(safe_eq_comp(beam.c.val, id)).cte(name='natural_stem_end_to_stem_end')
+        cte(name='natural_stem_end_to_stem_end')
     else :
       natural_stem_end_to_stem_end = natural_stem_end_to_stem_end.\
         where(safe_eq_comp(natural_stem_end.c.id, id)).\
@@ -121,8 +123,8 @@ if __name__ == "__main__" :
   from sqlalchemy import event, DDL
   
   ECHO = False
-  MANUAL_DDL = True
-  #MANUAL_DDL = False
+  #MANUAL_DDL = True
+  MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
   engine = create_engine('sqlite:///memory', echo=ECHO)
   conn = engine.connect()

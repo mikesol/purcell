@@ -41,12 +41,12 @@ class _Insert(InsertStmt) :
       unicode.c.val.label('unicode'),
       literal(0).label('x'),
       literal(0).label('y'),
-    ]).where(and_(name.c.val == 'clef',
+    ]).where(safe_eq_comp(name.c.id, id)).\
+    where(and_(name.c.val == 'clef',
                   name.c.id == font_name.c.id,
                   name.c.id == font_size.c.id,
                   name.c.id == unicode.c.id,
                   )).\
-    where(safe_eq_comp(name.c.id, id)).\
     cte(name='clefs_to_stencils')
 
     self.register_stmt(clefs_to_stencils)

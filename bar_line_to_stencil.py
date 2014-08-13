@@ -37,13 +37,13 @@ class _Insert(InsertStmt) :
       literal(0.0).label('x1'),
       (staff_space.c.val * (n_lines.c.val - 1)).label('y1'),
       bar_thickness.c.val.label('thickness'),
-    ]).where(and_(name.c.val == 'bar_line',
+    ]).where(safe_eq_comp(name.c.id, id)).\
+    where(and_(name.c.val == 'bar_line',
                   name.c.id == bar_thickness.c.id,
                   name.c.id == staff_symbol.c.id,
                   staff_symbol.c.val == staff_space.c.id,
                   staff_symbol.c.val == n_lines.c.id,
                   )).\
-    where(safe_eq_comp(name.c.id, id)).\
     cte(name='bar_lines_to_stencils')
 
     self.register_stmt(bar_lines_to_stencils)

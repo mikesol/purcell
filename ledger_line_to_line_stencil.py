@@ -52,8 +52,8 @@ class _Insert(InsertStmt) :
       (case([(ledger_line.c.val < 0, staff_space.c.val * n_lines.c.val)], else_ = - staff_space.c.val) - y_position.c.val).label('y1'),
       literal(0.13).label('thickness')
     ]).\
-    where(func.abs(ledger_line.c.val) > 0).\
     where(safe_eq_comp(ledger_line.c.id, id)).\
+    where(func.abs(ledger_line.c.val) > 0).\
     where(n_lines.c.id == staff_symbol.c.val).\
     where(staff_space.c.id == staff_symbol.c.val).\
     where(y_position.c.id == ledger_line.c.id).\

@@ -29,11 +29,11 @@ class _Insert(InsertStmt) :
       # 0.75 magic number for beam and space...
       case([(beam.c.val != None, 4.0 + (0.75 * ((duration_log.c.val * -1) - 3.0)))], else_=4.0).label('val')
     ]).select_from(duration_log.outerjoin(beam, onclause = duration_log.c.id == beam.c.id)).\
+      where(safe_eq_comp(duration_log.c.id, id)).\
       where(duration_log.c.val < 0).\
       where(name.c.id == duration_log.c.id).\
       where(name.c.val == 'note').\
-      where(safe_eq_comp(duration_log.c.id, id)).\
-    cte(name='duration_log_to_stem_lengths')
+          cte(name='duration_log_to_stem_lengths')
 
     self.register_stmt(duration_log_to_stem_lengths)
 
