@@ -55,7 +55,9 @@ def generate_ddl(font_name, font_size, accidental, glyph_box, accidental_width) 
 
   del_stmt = _Delete(accidental_width)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  when = EasyWhen(font_name, font_size, accidental)
+
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [font_name, font_size, accidental]]
 

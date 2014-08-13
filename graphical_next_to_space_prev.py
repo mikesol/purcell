@@ -38,6 +38,11 @@ def _TS_CLEF(name_left, name_right, width_left, width_right) :
 def _CLEF_TS(name_left, name_right, width_left, width_right) :
   return (and_(name_left.c.val == 'clef', name_right.c.val == 'time_signature'), 2.0 + width_left.c.val)
 
+def _TS_BAR(name_left, name_right, width_left, width_right) :
+  return (and_(name_left.c.val == 'time_signature', name_right.c.val == 'bar_line'), 2.0 + width_left.c.val)
+def _BAR_TS(name_left, name_right, width_left, width_right) :
+  return (and_(name_left.c.val == 'bar_line', name_right.c.val == 'time_signature'), 2.0 + width_left.c.val)
+
 def _CLEF_NOTE(name_left, name_right, width_left, left_width) :
   val = sql_min_max([4.0, left_width.c.val + 1.0], True)
   return (and_(name_left.c.val == 'clef', _is_rhythmic_event(name_right)), val + width_left.c.val)
@@ -50,6 +55,11 @@ def _CLEF_KEY(name_left, name_right, width_left, width_right) :
 def _KEY_CLEF(name_left, name_right, width_left, width_right) :
   return (and_(name_left.c.val == 'key_signature', name_right.c.val == 'clef'), 2.0 + width_left.c.val)
 
+def _CLEF_BAR(name_left, name_right, width_left, width_right) :
+  return (and_(name_left.c.val == 'clef', name_right.c.val == 'bar_line'), 2.0 + width_left.c.val)
+def _BAR_CLEF(name_left, name_right, width_left, width_right) :
+  return (and_(name_left.c.val == 'bar_line', name_right.c.val == 'clef'), 2.0 + width_left.c.val)
+
 def _KEY_NOTE(name_left, name_right, width_left, left_width) :
   val = sql_min_max([4.0, left_width.c.val + 1.0], True)
   return (and_(name_left.c.val == 'key_signature', _is_rhythmic_event(name_right)), val + width_left.c.val)
@@ -57,9 +67,21 @@ def _NOTE_KEY(name_left, name_right, right_width, width_right) :
   val = sql_min_max([4.0, right_width.c.val + 1.0], True)
   return (and_(_is_rhythmic_event(name_left), name_right.c.val == 'key_signature'), val + right_width.c.val)
 
+def _KEY_BAR(name_left, name_right, width_left, width_right) :
+  return (and_(name_left.c.val == 'key_signature', name_right.c.val == 'bar_line'), 2.0 + width_left.c.val)
+def _BAR_KEY(name_left, name_right, width_left, width_right) :
+  return (and_(name_left.c.val == 'bar_line', name_right.c.val == 'key_signature'), 2.0 + width_left.c.val)
+
+def _BAR_NOTE(name_left, name_right, width_left, left_width) :
+  val = sql_min_max([4.0, left_width.c.val + 1.0], True)
+  return (and_(name_left.c.val == 'bar_line', _is_rhythmic_event(name_right)), val + width_left.c.val)
+def _NOTE_BAR(name_left, name_right, right_width, width_right) :
+  val = sql_min_max([4.0, right_width.c.val + 1.0], True)
+  return (and_(_is_rhythmic_event(name_left), name_right.c.val == 'bar_line'), val + right_width.c.val)
+
 # for now...
 def _base_space(duration) :
-  return case([(duration.c.num * 1.0 / duration.c.den > 0.125, duration.c.num * 40.0 / duration.c.den)], else_ = 5.0)
+  return case([(duration.c.num * 1.0 / duration.c.den > 0.25, 10.0), (duration.c.num * 1.0 / duration.c.den > 0.125, duration.c.num * 40.0 / duration.c.den)], else_ = 5.0)
 
 def _NOTE_NOTE(name_left, name_right, duration, right_width, left_width) :
   base_space = _base_space(duration)
@@ -101,12 +123,24 @@ class _Insert(InsertStmt) :
                _KEY_TS(name_left, name_right, width_left, width_right),
                _TS_CLEF(name_left, name_right, width_left, width_right),
                _CLEF_TS(name_left, name_right, width_left, width_right),
+               _TS_BAR(name_left, name_right, width_left, width_right),
+               _BAR_TS(name_left, name_right, width_left, width_right),
+
                _CLEF_NOTE(name_left, name_right, width_left, left_width),
                _NOTE_CLEF(name_left, name_right, right_width, width_right),
                _CLEF_KEY(name_left, name_right, width_left, width_right),
                _KEY_CLEF(name_left, name_right, width_left, width_right),
+               _CLEF_BAR(name_left, name_right, width_left, width_right),
+               _BAR_CLEF(name_left, name_right, width_left, width_right),
+
+               _KEY_BAR(name_left, name_right, width_left, width_right),
+               _BAR_KEY(name_left, name_right, width_left, width_right),
                _KEY_NOTE(name_left, name_right, width_left, left_width),
                _NOTE_KEY(name_left, name_right, right_width, width_right),
+
+               _BAR_NOTE(name_left, name_right, width_left, left_width),
+               _NOTE_BAR(name_left, name_right, right_width, width_right),
+
                _NOTE_NOTE(name_left, name_right, duration, right_width, left_width),
         ], else_ = 0.0).label('val'),
         #name_left.c.val,
@@ -187,7 +221,7 @@ if __name__ == "__main__" :
   EXP = 5
   BIG = 2**EXP
 
-  NAME = ['time_signature', 'key_signature','clef'] + (['note','rest']*3)
+  NAME = ['time_signature', 'key_signature','clef','bar_line'] + (['note','rest']*3)
   #NAME = ['time_signature', 'key_signature']
   DURS = [{'num':1,"den":8},{'num':1,"den":4},{'num':3,"den":8},{'num':1,"den":2},{'num':3,"den":4},{'num':1,"den":1}]
 
@@ -213,7 +247,7 @@ if __name__ == "__main__" :
       stmts.append((Right_width, {'id':x, 'val': 8.0}))
       stmts.append((Left_width, {'id':x, 'val': 8.0}))
       stmts.append((Duration, {'id' : x, 'num' : dur['num'], 'den' : dur['den']}))
-    if name in ['time_signature','key_signature','clef'] :
+    if name in ['time_signature','key_signature','clef','bar_line'] :
       stmts.append((Width, {'id':x, 'val': 8.0}))
 
   trans = conn.begin()

@@ -206,7 +206,9 @@ def generate_ddl(name, pitch, octave, graphical_next, staff_position) :
   del_stmt_note = _DeleteFromNote(name, staff_position)
   del_stmt_clef = _DeleteFromClef(name, graphical_next, staff_position)
 
-  OUT += [DDL_unit(table, action, [del_stmt_note], [insert_stmt_note])
+  when_note = EasyWhen(name, pitch, octave, graphical_next)
+
+  OUT += [DDL_unit(table, action, [del_stmt_note], [insert_stmt_note], when_clause = when_note)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [name, pitch, octave, graphical_next]]
 

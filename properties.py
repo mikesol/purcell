@@ -1,5 +1,5 @@
 from sqlalchemy import Integer, Float, String, Column
-from plain import make_table, make_table_generic, Fraction
+from plain import make_table, make_table_generic, Fraction, Spanner
 
 Score = make_table('score', Integer)
 Staff = make_table('staff', Integer)
@@ -27,6 +27,9 @@ Accidental = make_table('accidental', Integer)
 Pitch = make_table('pitch', Integer)
 # octave attached to a note
 Octave = make_table('octave', Integer)
+
+# beam that a stem belongs to
+Beam = make_table('beam', Integer)
 
 # the fraction of a tuplet
 Tuplet_fraction = make_table('tuplet_fraction', Fraction)
@@ -76,14 +79,21 @@ Unicode = make_table('unicode', Integer)
 # has a ledger line?
 Ledger_line = make_table('ledger_line', Integer)
 
+Bar_thickness = make_table('bar_thickness', Integer)
+
 # length of stems
 Stem_length = make_table('stem_length', Float)
+Natural_stem_direction = make_table('natural_stem_direction', Integer)
 Stem_direction = make_table('stem_direction', Integer)
 Stem_x_offset = make_table('stem_x_offset', Float)
+Natural_stem_end = make_table('natural_stem_end', Float)
 Stem_end = make_table('stem_end', Float)
 
-Note_head_width = make_table('note_head_width', Float)
-Note_head_height = make_table('note_head_height', Float)
+Beam_x_position = make_table('beam_x_position', Spanner)
+Beam_y_position = make_table('beam_y_position', Spanner)
+
+Rhythmic_head_width = make_table('rhythmic_head_width', Float)
+Rhythmic_head_height = make_table('rhythmic_head_height', Float)
 Dot_width = make_table('dot_width', Float)
 Accidental_width = make_table('accidental_width', Float)
 Left_width = make_table('left_width', Float)
@@ -106,6 +116,7 @@ Graphical_next = make_table_generic('graphical_next', [
 Line_thickness = make_table('line_thickness', Float)
 Line_stencil = make_table_generic('line_stencil', [
                      Column('id', Integer, primary_key = True),
+                     Column('writer', String, primary_key = True),
                      Column('sub_id', Integer, primary_key = True),
                      Column('x0', Float),
                      Column('y0', Float),
@@ -118,6 +129,7 @@ N_lines = make_table('n_lines', Integer)
 Staff_space = make_table('staff_space', Float)
 
 Glyph_stencil = make_table_generic('glyph_stencil', [Column('id', Integer, primary_key = True),
+                     Column('writer', String, primary_key = True),
                      Column('sub_id', Integer, primary_key = True),
                      Column('font_name', String),
                      Column('font_size', Float),
@@ -125,7 +137,19 @@ Glyph_stencil = make_table_generic('glyph_stencil', [Column('id', Integer, prima
                      Column('x', Float),
                      Column('y', Float)])
 
+Polygon_stencil = make_table_generic('polygon_stencil', [Column('id', Integer, primary_key = True),
+                     Column('writer', String, primary_key = True),
+                     Column('sub_id', Integer, primary_key = True),
+                     Column('point', Integer, primary_key = True),
+                     Column('x', Float),
+                     Column('y', Float),
+                     Column('thickness', Float),
+                     Column('fill', Integer),
+                     Column('stroke', Integer),
+                     ])
+
 String_stencil = make_table_generic('string_stencil', [Column('id', Integer, primary_key = True),
+                     Column('writer', String, primary_key = True),
                      Column('sub_id', Integer, primary_key = True),
                      Column('font_name', String),
                      Column('font_size', Float),

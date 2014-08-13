@@ -1,3 +1,7 @@
+_HOST_NAME = '' 
+_PORT_NUMBER = 8000
+SSID = 1
+
 import tuplet_to_factor
 import rhythmic_events_to_durations
 import clef_to_width
@@ -8,7 +12,6 @@ import accidental_to_width
 import dots_to_width
 import rhythmic_events_to_right_width
 import rhythmic_events_to_left_width
-import nexts_to_graphical_next
 import graphical_next_to_space_prev
 import space_prev_to_x_position
 import duration_log_to_dimension
@@ -16,10 +19,16 @@ import note_head_to_staff_position
 import ledger_line_to_line_stencil
 import note_head_to_ledger_line
 import duration_log_to_stem_length
-import duration_log_to_stem_direction
+import duration_log_to_natural_stem_direction
+import natural_stem_direction_to_stem_direction
 import stem_direction_to_stem_x_offset
 import stem_to_line_stencil
-import stem_to_stem_end
+import stem_to_natural_stem_end
+import natural_stem_end_to_stem_end
+import bar_line_to_width
+import beam_to_beam_positions
+import beam_to_stencil
+import rest_to_staff_position
 
 import staff_symbol_to_stencil
 import clef_to_stencil
@@ -27,6 +36,10 @@ import time_signature_to_stencil
 import key_signature_to_stencil
 import duration_log_to_stencil
 import duration_log_to_flag_stencil
+import accidental_to_stencil
+import dots_to_stencil
+import bar_line_to_stencil
+import beam_to_stencil
 
 import bravura_tools
 import simple_http_server
@@ -37,6 +50,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import event, DDL, text
 
 from sqlalchemy.exc import ResourceClosedError
+from sqlalchemy.schema import CreateTable
 
 import json
 import time
@@ -58,6 +72,8 @@ ECHO = False
 MANUAL_DDL = False
 #MANUAL_DDL = True
 TABLES_TO_REPORT = [Line_stencil, Glyph_stencil, String_stencil, X_position]
+GIGANTIC_TEST = False
+ugggghh = 100
 
 T = True
 F = False
@@ -65,16 +81,15 @@ F = False
 TUPLET_TO_FACTOR = T
 RHYTHMIC_EVENTS_TO_DURATIONS = T
 CLEF_TO_WIDTH = T
-CLEF_TO_Y_POSITION = T
+STAFF_POSITION_TO_Y_POSITION = T
+REST_TO_STAFF_POSITION = T
 NOTE_HEAD_TO_STAFF_POSITION = T
-NOTE_HEAD_TO_Y_POSITION = T
 KEY_SIGNATURE_TO_WIDTH = T
 TIME_SIGNATURE_TO_WIDTH = T
 ACCIDENTAL_TO_WIDTH = T
 DOTS_TO_WIDTH = T
 RHYTHMIC_EVENTS_TO_RIGHT_WIDTH = T
 RHYTHMIC_EVENTS_TO_LEFT_WIDTH = T
-NEXTS_TO_GRAPHICAL_NEXT  = F
 GRAPHICAL_NEXT_TO_SPACE_PREV = T
 SPACE_PREV_TO_X_POSITION  = T
 DURATION_LOG_TO_WIDTH = T
@@ -87,11 +102,20 @@ DURATION_LOG_TO_STENCIL = T
 LEDGER_LINE_TO_LINE_STENCIL = T
 NOTE_HEAD_TO_LEDGER_LINE = T
 DURATION_LOG_TO_STEM_LENGTH = T
-DURATION_LOG_TO_STEM_DIRECTION = T
+DURATION_LOG_TO_NATURAL_STEM_DIRECTION = T
+NATURAL_STEM_DIRECTION_TO_STEM_DIRECTION = T
 STEM_DIRECTION_TO_STEM_X_OFFSET = T
-STEM_TO_STEM_END = T
+STEM_TO_NATURAL_STEM_END = T
+NATURAL_STEM_END_TO_STEM_END = T
 STEM_TO_LINE_STENCIL = T
 DURATION_LOG_TO_FLAG_STENCIL = T
+BEAM_TO_BEAM_X_POSITIONS = T
+BEAM_TO_BEAM_Y_POSITIONS = T
+ACCIDENTAL_TO_STENCIL = T
+DOTS_TO_STENCIL = T
+BAR_LINE_TO_WIDTH = T
+BAR_LINE_TO_STENCIL = T
+BEAM_TO_STENCIL = T
 
 #engine = create_engine('postgresql://localhost/postgres', echo=False)
 engine = create_engine('sqlite:///memory', echo=ECHO)
@@ -128,9 +152,14 @@ if KEY_SIGNATURE_TO_WIDTH :
                                      width = Width)
 
 ###############################
-if CLEF_TO_Y_POSITION :
-  manager.ddls += staff_position_to_y_position.generate_ddl(needle='clef',
-                                     name = Name,
+if BAR_LINE_TO_WIDTH :
+  manager.ddls += bar_line_to_width.generate_ddl(
+                                     bar_thickness = Bar_thickness,
+                                     width = Width)
+
+###############################
+if STAFF_POSITION_TO_Y_POSITION :
+  manager.ddls += staff_position_to_y_position.generate_ddl(
                                      staff_position = Staff_position,
                                      staff_symbol = Staff_symbol,
                                      staff_space = Staff_space,
@@ -145,41 +174,88 @@ if NOTE_HEAD_TO_STAFF_POSITION :
                                      staff_position = Staff_position)
 
 ###############################
-if NOTE_HEAD_TO_Y_POSITION :
-  manager.ddls += staff_position_to_y_position.generate_ddl(needle='note',
+if REST_TO_STAFF_POSITION :
+  manager.ddls += rest_to_staff_position.generate_ddl(
                                      name = Name,
-                                     staff_position = Staff_position,
-                                     staff_symbol = Staff_symbol,
-                                     staff_space = Staff_space,
-                                     y_position = Y_position)
-
+                                     staff_position = Staff_position)
 ############################
 if DURATION_LOG_TO_STEM_LENGTH :
   manager.ddls += duration_log_to_stem_length.generate_ddl(
                                      duration_log = Duration_log,
                                      name = Name,
+                                     beam = Beam,
                                      stem_length = Stem_length)
 
 #######################
-if DURATION_LOG_TO_STEM_DIRECTION :
-  manager.ddls += duration_log_to_stem_direction.generate_ddl(staff_position = Staff_position,
-                                     stem_length = Stem_length,
-                                     stem_direction = Stem_direction)
+if DURATION_LOG_TO_NATURAL_STEM_DIRECTION :
+  manager.ddls += duration_log_to_natural_stem_direction.generate_ddl(staff_position = Staff_position,
+                                     natural_stem_direction = Natural_stem_direction)
+
+#######################
+if NATURAL_STEM_DIRECTION_TO_STEM_DIRECTION :
+  manager.ddls += natural_stem_direction_to_stem_direction.generate_ddl(
+                            natural_stem_direction = Natural_stem_direction,
+                            beam = Beam,
+                            stem_direction = Stem_direction)
 
 #######################
 if STEM_DIRECTION_TO_STEM_X_OFFSET :
-  manager.ddls += stem_direction_to_stem_x_offset.generate_ddl(note_head_width = Note_head_width,
+  manager.ddls += stem_direction_to_stem_x_offset.generate_ddl(rhythmic_head_width = Rhythmic_head_width,
                                 stem_direction=  Stem_direction,
                                 stem_x_offset = Stem_x_offset)
 
 ###############################
-if STEM_TO_STEM_END :
-  manager.ddls += stem_to_stem_end.generate_ddl(
+if STEM_TO_NATURAL_STEM_END :
+  manager.ddls += stem_to_natural_stem_end.generate_ddl(
                                      stem_direction = Stem_direction,
                                      stem_length = Stem_length,
-                                     staff_symbol = Staff_symbol,
-                                     staff_space = Staff_space,
+                                     natural_stem_end = Natural_stem_end)
+
+#####################################
+if NATURAL_STEM_END_TO_STEM_END :
+  manager.ddls += natural_stem_end_to_stem_end.generate_ddl(
+                        natural_stem_end = Natural_stem_end,
+                                     beam = Beam,
+                                     beam_x_position = Beam_x_position,
+                                     beam_y_position = Beam_y_position,
+                                     x_position = X_position,
+                                     stem_x_offset = Stem_x_offset,
+                                     staff_position = Staff_position,
                                      stem_end = Stem_end)
+
+###############################
+if BEAM_TO_BEAM_X_POSITIONS :
+  manager.ddls += beam_to_beam_positions.generate_ddl(
+                  stem_direction = Stem_direction,
+                                     natural_stem_end = Natural_stem_end,
+                                     staff_position = Staff_position,
+                                     beam = Beam,
+                                     x_position = X_position,
+                                     stem_x_offset = Stem_x_offset,
+                                     beam_position = Beam_x_position,
+                                     x_pos = True)
+
+###############################
+if BEAM_TO_BEAM_Y_POSITIONS :
+  manager.ddls += beam_to_beam_positions.generate_ddl(
+                  stem_direction = Stem_direction,
+                                     natural_stem_end = Natural_stem_end,
+                                     staff_position = Staff_position,
+                                     beam = Beam,
+                                     x_position = X_position,
+                                     stem_x_offset = Stem_x_offset,
+                                     beam_position = Beam_y_position,
+                                     x_pos = False)
+
+###############################
+if BEAM_TO_STENCIL :
+  manager.ddls += beam_to_stencil.generate_ddl(
+                                     duration_log = Duration_log,
+                                     stem_direction = Stem_direction,
+                                     beam = Beam,
+                                     beam_x_position = Beam_x_position,
+                                     beam_y_position = Beam_y_position,
+                                     polygon_stencil = Polygon_stencil)
 
 ###############################
 if CLEF_TO_WIDTH : 
@@ -214,7 +290,7 @@ if DURATION_LOG_TO_WIDTH :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_dimension = Note_head_width,
+                                     rhythmic_event_dimension = Rhythmic_head_width,
                                      dimension = 'width')
 
 ################################
@@ -224,7 +300,7 @@ if DURATION_LOG_TO_HEIGHT :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_dimension = Note_head_height,
+                                     rhythmic_event_dimension = Rhythmic_head_height,
                                      dimension = 'height')
 
 ###############################
@@ -239,24 +315,17 @@ if DOTS_TO_WIDTH :
 
 ###############################
 if RHYTHMIC_EVENTS_TO_RIGHT_WIDTH :
-  manager.ddls += rhythmic_events_to_right_width.generate_ddl(note_head_width = Note_head_width,
+  manager.ddls += rhythmic_events_to_right_width.generate_ddl(rhythmic_head_width = Rhythmic_head_width,
                                      dot_width = Dot_width,
                                      rhythmic_event_to_dot_padding = Rhythmic_event_to_dot_padding,
                                      right_width = Right_width)
 
 ###############################
 if RHYTHMIC_EVENTS_TO_LEFT_WIDTH :
-  manager.ddls += rhythmic_events_to_left_width.generate_ddl(note_head_width = Note_head_width,
+  manager.ddls += rhythmic_events_to_left_width.generate_ddl(rhythmic_head_width = Rhythmic_head_width,
                                      accidental_width = Accidental_width,
                                      rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
                                      left_width = Left_width)
-
-###############################
-if NEXTS_TO_GRAPHICAL_NEXT :
-  manager.ddls += nexts_to_graphical_next.generate_ddl(horstemps_anchor = Horstemps_anchor,
-                                     horstemps_next = Horstemps_next,
-                                     time_next = Time_next,
-                                     graphical_next = Graphical_next)
 
 ###############################
 if GRAPHICAL_NEXT_TO_SPACE_PREV :
@@ -270,7 +339,7 @@ if GRAPHICAL_NEXT_TO_SPACE_PREV :
 
 ###############################
 if SPACE_PREV_TO_X_POSITION :
-  manager.ddls += space_prev_to_x_position.generate_ddl(graphical_next = Graphical_next,
+  manager.ddls += space_prev_to_x_position.generate_ddl(
                                      space_prev = Space_prev,
                                      x_position = X_position)
 ###############################
@@ -292,6 +361,15 @@ if TIME_SIGNATURE_TO_STENCIL :
                                      staff_symbol = Staff_symbol,
                                      staff_space = Staff_space,
                                      stencil = Glyph_stencil)
+###############################
+if BAR_LINE_TO_STENCIL :
+  manager.ddls += bar_line_to_stencil.generate_ddl(name = Name,
+                                     bar_thickness = Bar_thickness,
+                                     staff_symbol = Staff_symbol,
+                                     staff_space = Staff_space,
+                                     n_lines = N_lines,
+                                     line_stencil = Line_stencil)
+
 ###############################
 if STAFF_SYMBOL_TO_STENCIL :
   manager.ddls += staff_symbol_to_stencil.generate_ddl(name = Name,
@@ -321,12 +399,35 @@ if DURATION_LOG_TO_STENCIL :
                                      glyph_stencil = Glyph_stencil)
 
 ###############################
+if ACCIDENTAL_TO_STENCIL :
+  manager.ddls += accidental_to_stencil.generate_ddl(
+                                     font_name = Font_name,
+                                     font_size = Font_size,
+                                     accidental = Accidental,
+                                     accidental_width = Accidental_width, 
+                                     rhythmic_event_to_accidental_padding = Rhythmic_event_to_accidental_padding,
+                                     glyph_stencil = Glyph_stencil)
+
+###############################
+if DOTS_TO_STENCIL :
+  manager.ddls += dots_to_stencil.generate_ddl(
+                                     font_name = Font_name,
+                                     font_size = Font_size,
+                                     dots = Dots,
+                                     dot_width = Dot_width, 
+                                     rhythmic_head_width = Rhythmic_head_width,
+                                     rhythmic_event_to_dot_padding = Rhythmic_event_to_dot_padding,
+                                     glyph_stencil = Glyph_stencil)
+
+###############################
 if DURATION_LOG_TO_FLAG_STENCIL :
-  manager.ddls += duration_log_to_flag_stencil.generate_ddl(font_name = Font_name,
+  manager.ddls += duration_log_to_flag_stencil.generate_ddl(
+                                     beam = Beam,
+                                     font_name = Font_name,
                                      font_size = Font_size,
                                      duration_log = Duration_log,
                                      stem_x_offset = Stem_x_offset,
-                                     stem_end = Stem_end,
+                                     natural_stem_end = Natural_stem_end,
                                      stem_direction = Stem_direction, 
                                      glyph_stencil = Glyph_stencil)
 
@@ -344,7 +445,7 @@ if LEDGER_LINE_TO_LINE_STENCIL :
                                      n_lines = N_lines,
                                      staff_space = Staff_space,
                                      staff_symbol = Staff_symbol,
-                                     note_head_width = Note_head_width,
+                                     rhythmic_head_width = Rhythmic_head_width,
                                      y_position = Y_position,
                                      line_stencil = Line_stencil)
 
@@ -355,6 +456,26 @@ if NOTE_HEAD_TO_LEDGER_LINE :
                                      ledger_line = Ledger_line)
 
 
+manager.transitively_reduce_ddl_list(safe_removals = [
+  (Staff_position, Beam_x_position),
+  (Staff_position, Beam_y_position),
+  (Stem_direction, Beam_y_position)
+])
+'''
+for table in Score.metadata.sorted_tables :
+  print CreateTable(table),
+  print ";"
+
+for ddl in manager.ddls :
+  holder = ddl.as_ddl(False)
+  #print "***************************************"
+  #print holder.table
+  #print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  print holder.instruction
+
+
+sys.exit(1)
+'''
 if not MANUAL_DDL :
   manager.register_ddls(CONN, LOG = True)
 
@@ -367,9 +488,9 @@ stmts = []
 
 # DEFAULTS
 # TODO - in separate file?
-stmts.append((Dot_padding, {'id': -1, 'val':0.1}))
-stmts.append((Rhythmic_event_to_dot_padding, {'id':-1, 'val': 0.1}))
-stmts.append((Rhythmic_event_to_accidental_padding, {'id':-1, 'val': 0.1}))
+stmts.append((Dot_padding, {'id': -1, 'val':1.0}))
+stmts.append((Rhythmic_event_to_dot_padding, {'id':-1, 'val': 1.0}))
+stmts.append((Rhythmic_event_to_accidental_padding, {'id':-1, 'val': 0.5}))
 stmts.append((Time_signature_inter_number_padding, {'id':-1, 'val': 0.0}))
 stmts.append((Key_signature_inter_accidental_padding, {'id':-1, 'val': 0.5}))
 
@@ -384,14 +505,15 @@ for x in range(len(TN) - 1) :
 stmts.append((Name, {'id':0,'val':'time_signature'}))
 stmts.append((Font_name, {'id':0,'val':'Bravura'}))
 stmts.append((Font_size, {'id':0,'val':20}))
-stmts.append((Time_signature, {'id':0,'num':3,'den':4}))
+stmts.append((Time_signature, {'id':0,'num':4,'den':4}))
 
+'''
 # A key signature
 stmts.append((Name, {'id':1,'val':'key_signature'}))
 stmts.append((Font_name, {'id':1,'val':'Bravura'}))
 stmts.append((Font_size, {'id':1,'val':20}))
 stmts.append((Key_signature, {'id':1,'val':2}))
-
+'''
 # A clef
 stmts.append((Name, {'id':2,'val':'clef'}))
 stmts.append((Font_name, {'id':2,'val':'Bravura'}))
@@ -401,6 +523,7 @@ stmts.append((Staff_position, {'id':2,'val':-1.0}))
 stmts.append((Pitch, {'id':2,'val':4}))
 stmts.append((Octave, {'id':2,'val':0}))
 
+'''
 # some notes and rests
 stmts.append((Name, {'id':3,'val':'note'}))
 stmts.append((Font_name, {'id':3,'val':'Bravura'}))
@@ -423,6 +546,10 @@ stmts.append((Font_size, {'id':5,'val':20}))
 stmts.append((Duration_log, {'id':5,'val':0}))
 stmts.append((Pitch, {'id':5,'val':4}))
 stmts.append((Octave, {'id':5,'val':0}))
+
+# a bar line
+stmts.append((Name, {'id':10,'val':'bar_line'}))
+stmts.append((Bar_thickness, {'id':10,'val':0.3}))
 
 # another clef
 stmts.append((Name, {'id':6,'val':'clef'}))
@@ -447,10 +574,31 @@ stmts.append((Name, {'id':8,'val':'rest'}))
 stmts.append((Font_name, {'id':8,'val':'Bravura'}))
 stmts.append((Font_size, {'id':8,'val':20}))
 stmts.append((Duration_log, {'id':8,'val':-1}))
+'''
 
-NEXT = [None, 2,1,0,3,4,5,6,7,8,None]
-for x in range(1, len(NEXT) - 1) :
-  stmts.append((Graphical_next, {'id' : NEXT[x], 'next' : NEXT[x + 1], 'prev' : NEXT[x-1]}))
+NEXT = []
+
+if GIGANTIC_TEST :
+  
+  for x in range(ugggghh) :
+    stmts.append((Name, {'id':11+x,'val':'note'}))
+    stmts.append((Font_name, {'id':11+x,'val':'Bravura'}))
+    stmts.append((Font_size, {'id':11+x,'val':20}))
+    stmts.append((Duration_log, {'id':11+x,'val':-4}))
+    stmts.append((Pitch, {'id':11+x,'val':random.choice([0,1,2,3,4,5,6])}))
+    stmts.append((Octave, {'id':11+x,'val':-1}))
+    #stmts.append((Beam, {'id':11+x,'val':11+ugggghh}))
+  NEXT = [None, 2,1,0,3,4,5,10,6,7,8,] + [x + 11 for x in range(ugggghh)] + [None]
+  for x in range(1, len(NEXT) - 1) :
+    stmts.append((Graphical_next, {'id' : NEXT[x], 'next' : NEXT[x + 1], 'prev' : NEXT[x-1]}))
+  # ugggh
+  #NEXT += [11+ugggghh] # beam
+  
+else :
+  #NEXT = [None, 2,1,0,3,4,5,10,6,7,8,None]
+  NEXT = [None, 2,0, None]
+  for x in range(1, len(NEXT) - 1) :
+    stmts.append((Graphical_next, {'id' : NEXT[x], 'next' : NEXT[x + 1], 'prev' : NEXT[x-1]}))
 
 '''
 # link up things out of time, including to their anchors
@@ -466,22 +614,25 @@ for x in range(len(HT_1) - 1) :
   stmts.append((Horstemps_anchor, {'id':HT_1[x], 'val':7}))
 '''
 # make a staff symbol
-stmts.append((Name, {'id':9,'val':'staff_symbol'}))
-stmts.append((Line_thickness, {'id':9, 'val':0.13}))
-stmts.append((N_lines, {'id':9,'val':5}))
-stmts.append((Staff_space, {'id':9, 'val':1.0}))
+stmts.append((Name, {'id':SSID,'val':'staff_symbol'}))
+stmts.append((Line_thickness, {'id':SSID, 'val':0.13}))
+stmts.append((N_lines, {'id':SSID,'val':5}))
+stmts.append((Staff_space, {'id':SSID, 'val':1.0}))
 
-for x in range(9) :
-  stmts.append((Staff_symbol, {'id':x,'val':9}))
+for x in NEXT :
+  if x != None :
+    stmts.append((Staff_symbol, {'id':x,'val':SSID}))
 
-for x in range(10) :
-  stmts.append((Used_ids, {'id':x}))
+for x in NEXT + [SSID] :
+  if x != None :
+    stmts.append((Used_ids, {'id':x}))
 
 # run!
 
 trans = CONN.begin()
 for st in stmts :
   print "~~~~~~~~~~~~~~~~~~~~~~~", st[0].name, st[1]
+  #print str(st[0].insert().values(**st[1]))
   manager.insert(CONN, st[0].insert().values(**st[1]), MANUAL_DDL)
 trans.commit()
 
@@ -506,9 +657,6 @@ for table in TABLES_TO_REPORT :
 
 print json.dumps(OUT)
 '''
-
-_HOST_NAME = '' 
-_PORT_NUMBER = 8000
 
 '''
 class Engraver(object) :
@@ -558,15 +706,21 @@ class Engraver(WebSocket) :
         out[obj['name']] = []
         for row in result.fetchall() :
           to_append = {}
+          #print obj['expected'], row
           for x in range(len(row)) :
             to_append[obj['expected'][x]] = row[x]
           out[obj['name']].append(to_append)
       if jobj.has_key('subsequent') :
         out['subsequent'] = jobj['subsequent']
-    for key in WSM.keys() :
-      if jobj.has_key('return') :
-        if (jobj['return'] == "*") or re.match(jobj['return'], key) :
+    to_prune = []
+    if jobj.has_key('return') :
+      for key in WSM.keys() :
+        if WSM[key].terminated :
+          to_prune.append(key)
+        elif (jobj['return'] == "*") or re.match(jobj['return'], key) :
           WSM[key].send(json.dumps(out), False)
+    for key in to_prune :
+      del WSM[key]
 
 server = WSGIServer((_HOST_NAME, _PORT_NUMBER), WebSocketWSGIApplication(handler_cls=Engraver))
 print time.asctime(), "Server Starts - %s:%s" % (_HOST_NAME, _PORT_NUMBER)

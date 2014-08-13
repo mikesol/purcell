@@ -9,7 +9,7 @@ _THICK = 0.16
 class _Delete(DeleteStmt) :
   def __init__(self, line_stencil) :
     def where_clause_fn(id) :
-      return and_(line_stencil.c.id == id, line_stencil.c.sub_id == 0)
+      return and_(line_stencil.c.id == id, line_stencil.c.writer == 'stem_to_line_stencil')
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
@@ -31,6 +31,7 @@ class _Insert(InsertStmt) :
     
     stem_to_line_stencil = select([
       stem_x_offset.c.id.label('id'),
+      literal('stem_to_line_stencil').label('writer'),
       literal(0).label('sub_id'),
       x0.label('x0'),
       literal(0.0).label('y0'),
@@ -54,7 +55,9 @@ def generate_ddl(stem_x_offset, stem_end, line_stencil) :
 
   del_stmt = _Delete(line_stencil)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  when = EasyWhen(stem_x_offset, stem_end)
+
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [stem_x_offset, stem_end]]
 

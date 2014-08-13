@@ -8,6 +8,7 @@ from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
 import string
 import random
 import math
+import transitive_reduction
 
 _GLOBAL_VERBOSE = False
 
@@ -22,10 +23,19 @@ def almost_equal(x,y) :
 _metadata = MetaData()
 
 class Fraction : pass
-class Line : pass
-class Glyph : pass
-class Str : pass
-class Doubly_linked_list : pass
+class Spanner : pass
+
+###
+class DummyConnection(object) :
+  def __init__(self) :
+    self.out = []
+  def execute(self, thing) :
+    self.out.append(str(thing))
+  def __str__(self) :
+    out = '\n'.join(self.out)
+    return out
+    
+###
 
 def make_table_generic(name, cols) :
   return Table(name, _metadata, *cols)
@@ -37,6 +47,12 @@ def make_table(name, tp, unique = False) :
                      [Column('id', Integer, primary_key = True),
                      Column('num', Integer),
                      Column('den', Integer)])
+  if tp == Spanner :
+    # unique not possible
+    return make_table_generic(name,
+                     [Column('id', Integer, primary_key = True),
+                     Column('left', Float),
+                     Column('right', Float)])
   return Table(name, _metadata,
                      Column('id', Integer, primary_key = True),
                      Column('val', tp, unique = unique))
@@ -280,17 +296,43 @@ class DeleteStmt(object) :
     for row in conn.execute(select([self.table])) :
       print "    ", row
 
+class WhenStmt(object) :
+  # probably should make dict_keys obligatory
+  def __init__(self, clause_fn) :
+    self.clause_fn = clause_fn
+  def get_stmt(self, id) :
+    clause = self.clause_fn(id)
+    return clause
+
+class EasyWhen(WhenStmt) :
+  def __init__(self, *args) :
+    def clause_fn(id) :
+      referent = args[0]
+      others = args[1:]
+      stmt = select([referent.c.id])
+      sf = referent
+      for other in others :
+        sf = sf.join(other, onclause=referent.c.id == other.c.id)
+      return exists(stmt.select_from(sf))
+    WhenStmt.__init__(self, clause_fn)
+
+
+
 class DDL_unit(object) :
-  def __init__(self, table, action, deletes = [], inserts = [], before = False) :
+  def __init__(self, table, action, deletes = [], inserts = [], before = False, when_clause = None) :
     self.table = table
     self.action = action
     self.deletes = deletes
     self.inserts = inserts
     self.before = before
+    self.when_clause = when_clause
   def as_ddl(self, LOG = False) :
     del_st = '\n'.join([str(delete.get_stmt('@ID@').compile(compile_kwargs={"literal_binds": True}))+";" for delete in self.deletes])
     inst_st = '\n'.join([str(insert.get_stmt('@ID@').compile(compile_kwargs={"literal_binds": True}))+";" for insert in self.inserts])
-    trigger = '''CREATE TRIGGER {2} {6} {1} ON {0}
+    when_st = ''
+    if self.when_clause :
+      when_st = 'WHEN ('+str(self.when_clause.get_stmt('@ID@').compile(compile_kwargs={"literal_binds": True}))+")"
+    trigger = '''CREATE TRIGGER {2} {6} {1} ON {0} {7}
       BEGIN
           {3}
           {4}
@@ -305,7 +347,7 @@ class DDL_unit(object) :
     # arggg - we need to add a random tag to the trigger names in case multiple ddls operate on same tables
     tb_nm += '_'+_randString(4)
     log_st = "INSERT INTO log_table (mom, msg) VALUES (strftime('%%f','now'),'{0}');".format(tb_nm) if LOG else ''
-    instr = trigger.format(self.table.name, self.action, tb_nm, log_st, del_st, inst_st, 'BEFORE' if self.before else 'AFTER')
+    instr = trigger.format(self.table.name, self.action, tb_nm, log_st, del_st, inst_st, 'BEFORE' if self.before else 'AFTER', when_st)
     instr = instr.replace("'@ID@'", '{0}.id'.format('old' if self.action == 'DELETE' else 'new'))
     # ugggh...
     instr = instr.replace("@ID@", '{0}.id'.format('old' if self.action == 'DELETE' else 'new'))
@@ -378,6 +420,88 @@ class DDL_manager(object) :
             print "--PERFORMING INSERT ON", stmt.table.name, "TRIGGERED By", action, "ON", table.name
             self.insert(conn, stmt, True)
             insert.debug_after(conn = conn)
+  def transitively_reduce_ddl_list(self, filename='tmp.dot', safe_removals = []) :
+    mapping = {}
+    _x = 0
+    edges = []
+    edges_to_ddl = {}
+    for ddl in self.ddls :
+      table = ddl.table
+      deletes = ddl.deletes
+      inserts = ddl.inserts
+      if not mapping.has_key(table) :
+        mapping[table] = _x
+        _x += 1
+      for delete in deletes :
+        if not mapping.has_key(delete.table) :
+          mapping[delete.table] = _x
+          _x += 1
+        edges.append((mapping[table], mapping[delete.table]))
+        if not edges_to_ddl.has_key(edges[-1]) :
+          edges_to_ddl[edges[-1]] = []
+        edges_to_ddl[edges[-1]].append(ddl)
+      for insert in inserts :
+        insert.generate_stmt("@ID@")
+        if not mapping.has_key(insert.insert.table) :
+          mapping[insert.insert.table] = _x
+          _x += 1
+        edges.append((mapping[table],mapping[insert.insert.table]))
+        if not edges_to_ddl.has_key(edges[-1]) :
+          edges_to_ddl[edges[-1]] = []
+        edges_to_ddl[edges[-1]].append(ddl)
+    edges = list(set(edges))
+    for key, val in mapping.items() :
+      mapping[val] = key
+    ddls_to_nix = []
+    edges_to_nix = []
+    for removal in safe_removals :
+      for edge in edges :
+        if (mapping[edge[0]] == removal[0]) and (mapping[edge[1]] == removal[1]) :
+          ddls_to_nix += edges_to_ddl[edge]
+          edges_to_nix.append(edge)
+    ddls_to_nix = list(set(ddls_to_nix))
+    edges_to_nix = list(set(edges_to_nix))
+    print edges_to_nix, len(self.ddls)
+    for ddl in ddls_to_nix :
+      self.ddls.remove(ddl)
+    print len(self.ddls)
+    for edge in edges_to_nix :
+      edges.remove(edge)
+    #for edge in edges :
+    #  print edge, mapping[edge[0]], mapping[edge[1]]
+    graph = transitive_reduction.Graph()
+    graph.edges = list(edges)
+    graph.nodes = list(set(sum(edges, ())))
+    transitive_reduction.do_transitive_reduction_of_graph(graph)
+    #for edge in graph.removed_edges :
+    #  print edge, mapping[edge[0]], mapping[edge[1]]
+    '''
+    to_remove = []
+    for ddl in self.ddls :
+      table = ddl.table
+      deletes = ddl.deletes
+      inserts = ddl.inserts
+      other_table = set([])
+      for delete in deletes :
+        other_table.add(delete.table)
+      for insert in inserts :
+        other_table.add(insert.insert.table)
+      if len(other_table) > 1 :
+        print "skpping", len(other_table), other_table
+        continue
+      E = (mapping[table], mapping[list(other_table)[0]])
+      if E in graph.removed_edges :
+        to_remove.append(ddl)
+    for ddl in to_remove :
+      self.ddls.remove(ddl)
+    '''
+    out = 'digraph G{\n'
+    for edge in edges :
+      out += '  "{0}" -> "{1}";\n'.format(str(mapping[edge[0]]), str(mapping[edge[1]]))
+    out += "}"
+    FW = file(filename, 'w')
+    FW.write(out)
+    FW.close()
 
 def realize(to_realize, comp_t, prop) :
   #out = select([v.label(k) for k,v in to_realize.c.items()]).\

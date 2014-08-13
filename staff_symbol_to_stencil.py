@@ -8,16 +8,17 @@ import bravura_tools
 class _Delete(DeleteStmt) :
   def __init__(self, line_stencil) :
     def where_clause_fn(id) :
-      return line_stencil.c.id == id
+      return and_(line_stencil.c.id == id, line_stencil.c.writer == 'staff_symbol_to_stencil')
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
 class _Delete_XP(DeleteStmt) :
   def __init__(self, staff_space, line_stencil) :
     def where_clause_fn(id) :
       # uggghh
-      stmt = select([staff_space.c.id]).where(and_(line_stencil.c.id == staff_space.c.id))
-      return exists(stmt)
-      #return line_stencil.c.id != 3.1416
+      #stmt = select([staff_space.c.id]).where(and_(line_stencil.c.id == staff_space.c.id))
+      #return exists(stmt)
+      #return and_(line_stencil.c.id == id, line_stencil.c.writer == 'staff_symbol_to_stencil')
+      return line_stencil.c.writer == 'staff_symbol_to_stencil'
     DeleteStmt.__init__(self, line_stencil, where_clause_fn)
 
 # UGGGGH always redraw
@@ -46,12 +47,17 @@ class _Insert(InsertStmt) :
 
     self.register_stmt(x_position_min_max)
     
+    last_elt_name = name.alias(name='last_elt_name')
+    
     first_line = select([
       name.c.id.label('id'),
+      literal('staff_symbol_to_stencil').label('writer'),
       literal(0).label('sub_id'),
       x_position_min_max.c.x_position_min.label('x0'),
       literal(0.0).label('y0'),
-      x_position_min_max.c.x_position_max.label('x1'),
+      (x_position_min_max.c.x_position_max +\
+        case([(last_elt_name.c.val == 'bar_line', 0.0)], else_ = 5.5)
+           ).label('x1'),
       literal(0.0).label('y1'),
       line_thickness.c.val.label('thickness'),
     ]).select_from(
@@ -60,6 +66,8 @@ class _Insert(InsertStmt) :
         join(n_lines, onclause = name.c.id == n_lines.c.id).\
         join(staff_space, onclause = name.c.id == staff_space.c.id)
       ).where(name.c.val == "staff_symbol").\
+        where(last_elt_name.c.id == x_position.c.id).\
+        where(x_position.c.val == x_position_min_max.c.x_position_max).\
         where(x_position_min_max.c.x_position_min != None).\
         where(x_position_min_max.c.x_position_max != None).\
         where(n_lines.c.val > 0).cte(name = 'line_from_staff_symbol', recursive = True)
@@ -73,10 +81,11 @@ class _Insert(InsertStmt) :
     to_insert = first_line.union_all(
       select([
         prev_line.c.id,
+        literal('staff_symbol_to_stencil'),
         prev_line.c.sub_id + 1,
-        x_position_min_max.c.x_position_min,
+        prev_line.c.x0,
         prev_line.c.y0 + staff_space.c.val,
-        x_position_min_max.c.x_position_max,
+        prev_line.c.x1,
         prev_line.c.y1 + staff_space.c.val,
         prev_line.c.thickness
       ]).select_from(prev_line.join(line_thickness, onclause = prev_line.c.id == line_thickness.c.id).\
@@ -114,8 +123,8 @@ if __name__ == "__main__" :
   from sqlalchemy import event, DDL
   
   ECHO = False
-  #MANUAL_DDL = True
-  MANUAL_DDL = False
+  MANUAL_DDL = True
+  #MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
   engine = create_engine('sqlite:///memory', echo=ECHO)
   conn = engine.connect()
@@ -136,8 +145,8 @@ if __name__ == "__main__" :
 
   bravura_tools.populate_glyph_box_table(conn, Glyph_box)
 
-  #for row in conn.execute(select([Note_head_width])).fetchall() : print row
-  #for row in conn.execute(select([Note_head_height])).fetchall() : print row
+  #for row in conn.execute(select([Rhythmic_head_width])).fetchall() : print row
+  #for row in conn.execute(select([Rhythmic_head_height])).fetchall() : print row
 
   stmts = []
 

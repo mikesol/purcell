@@ -12,8 +12,9 @@ class _Delete(DeleteStmt) :
       # otherwise, we may delete a glyph_stencil after a staff_symbol update
       # even if the glyph is not based on staff_symbols
       # so, we localize this just to key_signatures
-      stmt = select([name.c.id]).where(and_(glyph_stencil.c.id == id, name.c.id == id, name.c.val == 'key_signature'))
-      return exists(stmt)
+      #stmt = select([name.c.id]).where(and_(glyph_stencil.c.id == id, name.c.id == id, name.c.val == 'key_signature'))
+      #return exists(stmt)
+      return and_(glyph_stencil.c.id == id, glyph_stencil.c.writer == 'key_signature_to_stencil')
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
 def _wind_inside_staff(v) :
@@ -43,6 +44,7 @@ class _Insert(InsertStmt) :
 
     key_signature_to_stencil_head = select([
       key_signature.c.id.label('id'),
+      literal('key_signature_to_stencil').label('writer'),
       literal(0).label('sub_id'),
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
@@ -69,6 +71,7 @@ class _Insert(InsertStmt) :
     key_signature_to_stencil = key_signature_to_stencil_head.union_all(
       select([
         key_signature_to_stencil_prev.c.id,
+        literal('key_signature_to_stencil'),
         key_signature_to_stencil_prev.c.sub_id + 1,
         key_signature_to_stencil_prev.c.font_name,
         key_signature_to_stencil_prev.c.font_size,
@@ -87,6 +90,7 @@ class _Insert(InsertStmt) :
 
     key_signature_to_stencil = select([
       key_signature_to_stencil.c.id.label('id'),
+      key_signature_to_stencil.c.writer.label('writer'),
       key_signature_to_stencil.c.sub_id.label('sub_id'),
       key_signature_to_stencil.c.font_name.label('font_name'),
       key_signature_to_stencil.c.font_size.label('font_size'),
@@ -108,7 +112,9 @@ def generate_ddl(name, font_name, font_size, key_signature, width, staff_symbol,
 
   del_stmt = _Delete(name, glyph_stencil)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  when = EasyWhen(name, font_name, font_size, key_signature, staff_symbol, width)
+
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [name, font_name, font_size, key_signature, staff_symbol, width]]
 

@@ -10,7 +10,7 @@ def _gulp(f) :
   infi.close()
   return out
 
-def populate_glyph_box_table(conn, table) :
+def populate_glyph_box_table(conn, table, spew_sql = False) :
   glyphnames = json.loads(_gulp("fonts/glyphnames.json"))
   bravura_metadata = json.loads(_gulp("fonts/bravura_metadata.json"))
   bboxes = bravura_metadata["glyphBBoxes"]
@@ -22,6 +22,12 @@ def populate_glyph_box_table(conn, table) :
       width = bboxes[key]['bBoxNE'][0] - x
       height = bboxes[key]['bBoxNE'][1] - y
       CACHE.append({"name" : "Bravura", "unicode" : str(glyphnames[key]['codepoint']), 'x' : x, 'y': y, 'width':width, 'height':height})
+  if spew_sql :
+    for row in CACHE :
+      keys = row.keys()
+      values = [row[key] for key in keys]
+      conditioned_values = [str(x) if type(x) != type("") else "'"+x+"'" for x in values]
+      print "INSERT INTO GLYPH_BOX ("+(",".join(keys))+") VALUES ("+(",".join(conditioned_values))+");"
   trans = conn.begin()
   for elt in CACHE :
     conn.execute(table.insert().values(**elt))
@@ -33,8 +39,8 @@ if __name__ == '__main__' :
   
   MAKE_CACHE = True
   
-  ECHO = True
-  #ECHO = False
+  #ECHO = True
+  ECHO = False
   MANUAL_DDL = True
   #MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
@@ -45,4 +51,4 @@ if __name__ == '__main__' :
   Glyph_box.metadata.drop_all(engine)
   Glyph_box.metadata.create_all(engine)
   
-  populate_glyph_box_table(conn, Glyph_box)
+  populate_glyph_box_table(conn, Glyph_box, True)

@@ -5,45 +5,45 @@ import time
 # need to find a way to work font size into this...
 
 class _Delete(DeleteStmt) :
-  def __init__(self, stem_direction) :
+  def __init__(self, natural_stem_end) :
     def where_clause_fn(id) :
-      return stem_direction.c.id == id
-    DeleteStmt.__init__(self, stem_direction, where_clause_fn)
+      return natural_stem_end.c.id == id
+    DeleteStmt.__init__(self, natural_stem_end, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, staff_position, stem_length, stem_direction) :
+  def __init__(self, stem_direction, stem_length, natural_stem_end) :
     InsertStmt.__init__(self)
-    self.stem_length = stem_length
-    self.staff_position = staff_position
     self.stem_direction = stem_direction
+    self.stem_length = stem_length
+    self.natural_stem_end = natural_stem_end
 
   def _generate_stmt(self, id) : 
-    stem_length = self.stem_length
-    staff_position = self.staff_position
     stem_direction = self.stem_direction
+    stem_length = self.stem_length
+    natural_stem_end = self.natural_stem_end
 
-    duration_log_to_stem_directions = select([
-      stem_length.c.id.label('id'),
-      case([(staff_position.c.val > 0, -1)], else_ = 1).label('val')
+    stem_to_natural_stem_end = select([
+      stem_direction.c.id.label('id'),
+      (stem_direction.c.val * stem_length.c.val).label('val'),
     ]).\
-      where(staff_position.c.id == stem_length.c.id).\
-      where(safe_eq_comp(stem_length.c.id, id)).\
-    cte(name='duration_log_to_stem_directions')
+      where(stem_length.c.id == stem_direction.c.id).\
+      where(safe_eq_comp(stem_direction.c.id, id)).\
+    cte(name='stem_to_natural_stem_end')
 
-    self.register_stmt(duration_log_to_stem_directions)
+    self.register_stmt(stem_to_natural_stem_end)
 
-    self.insert = simple_insert(stem_direction, duration_log_to_stem_directions)
+    self.insert = simple_insert(natural_stem_end, stem_to_natural_stem_end)
 
-def generate_ddl(staff_position, stem_length, stem_direction) :
+def generate_ddl(stem_direction, stem_length, natural_stem_end) :
   OUT = []
 
-  insert_stmt = _Insert(staff_position, stem_length, stem_direction)
+  insert_stmt = _Insert(stem_direction, stem_length, natural_stem_end)
 
-  del_stmt = _Delete(stem_direction)
+  del_stmt = _Delete(natural_stem_end)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [staff_position, stem_length]]
+     for table in [stem_direction, stem_length]]
 
   return OUT
 
@@ -61,9 +61,9 @@ if __name__ == "__main__" :
   conn = engine.connect()
   generate_sqlite_functions(conn)
 
-  manager = DDL_manager(generate_ddl(staff_position = Staff_position,
+  manager = DDL_manager(generate_ddl(stem_direction = Stem_direction,
                                      stem_length = Stem_length,
-                                     stem_direction = Stem_direction))
+                                     natural_stem_end = Natural_stem_end))
 
   if not MANUAL_DDL :
     manager.register_ddls(conn, LOG = True)
@@ -73,9 +73,12 @@ if __name__ == "__main__" :
 
   stmts = []
 
+  #stmts.append((Staff_space, {'id':10,'val':1.0}))
+
   for x in range(10) :
-    stmts.append((Staff_position, {'id': x,'val': (x/2.0) - 2.5}))
-    stmts.append((Stem_length, {'id':x,'val': 5.0}))
+    stmts.append((Stem_direction, {'id': x,'val': -1 if x < 5 else 1}))
+    stmts.append((Stem_length, {'id':x,'val': 3.5}))
+    #stmts.append((Staff_symbol, {'id':x,'val': 10}))
 
   trans = conn.begin()
   for st in stmts :
@@ -83,7 +86,7 @@ if __name__ == "__main__" :
   trans.commit()
 
   NOW = time.time()
-  for row in conn.execute(select([Stem_direction])).fetchall() :
+  for row in conn.execute(select([Natural_stem_end])).fetchall() :
     print row
   
   #manager.update(conn, Duration, {'num':100, 'den':1}, Duration.c.id == 4, MANUAL_DDL)

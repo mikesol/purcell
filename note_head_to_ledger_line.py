@@ -49,7 +49,9 @@ def generate_ddl(name, staff_position, ledger_line) :
 
   del_stmt = _Delete(name, ledger_line)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  when = EasyWhen(name, staff_position)
+
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [name, staff_position]]
 

@@ -12,8 +12,9 @@ class _Delete(DeleteStmt) :
       # otherwise, we may delete a glyph_stencil after a staff_symbol update
       # even if the glyph is not based on staff_symbols
       # so, we localize this just to clefs
-      stmt = select([name.c.id]).where(and_(glyph_stencil.c.id == id, name.c.id == id, name.c.val == 'clef'))
-      return exists(stmt)
+      #stmt = select([name.c.id]).where(and_(glyph_stencil.c.id == id, name.c.id == id, name.c.val == 'clef'))
+      #return exists(stmt)
+      return and_(glyph_stencil.c.id == id, glyph_stencil.c.writer == 'clef_to_stencil')
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
@@ -33,6 +34,7 @@ class _Insert(InsertStmt) :
     
     clefs_to_stencils = select([
       name.c.id.label('id'),
+      literal('clef_to_stencil').label('writer'),
       literal(0).label('sub_id'),
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
@@ -58,7 +60,9 @@ def generate_ddl(name, font_name, font_size, unicode, glyph_stencil) :
 
   del_stmt = _Delete(name, glyph_stencil)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  when = EasyWhen(name, font_name, font_size, unicode)
+
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [name, font_name, font_size, unicode]]
 

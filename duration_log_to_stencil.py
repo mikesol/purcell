@@ -8,7 +8,7 @@ class _Delete(DeleteStmt) :
   def __init__(self, glyph_stencil) :
     def where_clause_fn(id) :
       # 0 for note head
-      return and_(glyph_stencil.c.id == id, glyph_stencil.c.sub_id == 0)
+      return and_(glyph_stencil.c.id == id, glyph_stencil.c.writer == 'duration_log_to_stencil')
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
@@ -29,6 +29,7 @@ class _Insert(InsertStmt) :
 
     duration_log_to_glyph_stencils = select([
       duration_log.c.id.label('id'),
+      literal('duration_log_to_stencil').label('writer'),
       literal(0).label('sub_id'),
       font_name.c.val.label('font_name'),
       font_size.c.val.label('font_size'),
@@ -63,8 +64,10 @@ def generate_ddl(font_name, font_size, duration_log, name, glyph_stencil) :
   insert_stmt = _Insert(font_name, font_size, duration_log, name, glyph_stencil)
 
   del_stmt = _Delete(glyph_stencil)
+  
+  when_clause = when = EasyWhen(font_name, font_size, duration_log, name)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [font_name, font_size, duration_log, name]]
 

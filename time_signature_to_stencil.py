@@ -14,8 +14,9 @@ class _Delete(DeleteStmt) :
       # otherwise, we may delete a glyph_stencil after a staff_symbol update
       # even if the glyph is not based on staff_symbols
       # so, we localize this just to time_signatures
-      stmt = select([name.c.id]).where(and_(glyph_stencil.c.id == id, name.c.id == id, name.c.val == 'time_signature'))
-      return exists(stmt)
+      #stmt = select([name.c.id]).where(and_(glyph_stencil.c.id == id, name.c.id == id, name.c.val == 'time_signature'))
+      #return exists(stmt)
+      return and_(glyph_stencil.c.id == id, glyph_stencil.c.writer == 'time_signature_to_stencil')
     DeleteStmt.__init__(self, glyph_stencil, where_clause_fn)
 
 class _Insert(InsertStmt) :
@@ -77,6 +78,7 @@ class _Insert(InsertStmt) :
     
     time_signatures_to_stencils = select([
        time_signatures_to_xy_info.c.id.label('id'),
+       literal('time_signature_to_stencil').label('writer'),
        literal(0).label('sub_id'),
        time_signatures_to_xy_info_num.c.font_name.label('font_name'),
        time_signatures_to_xy_info_num.c.font_size.label('font_size'),
@@ -86,6 +88,7 @@ class _Insert(InsertStmt) :
      ]).\
        union_all(select([
        time_signatures_to_xy_info_den.c.id.label('id'),
+       literal('time_signature_to_stencil'),
        literal(1).label('sub_id'),
        time_signatures_to_xy_info_den.c.font_name.label('font_name'),
        time_signatures_to_xy_info_den.c.font_size.label('font_size'),

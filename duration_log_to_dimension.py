@@ -62,8 +62,10 @@ def generate_ddl(font_name, font_size, duration_log, glyph_box, name, rhythmic_e
   insert_stmt = _Insert(font_name, font_size, duration_log, glyph_box, name, rhythmic_event_dimension, dimension)
 
   del_stmt = _Delete(rhythmic_event_dimension)
+  
+  when = EasyWhen(font_name, duration_log, name)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [font_name, duration_log, name]]
 
@@ -88,7 +90,7 @@ if __name__ == "__main__" :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_dimension = Note_head_width,
+                                     rhythmic_event_dimension = Rhythmic_head_width,
                                      dimension = 'width'))
 
   manager.ddls += generate_ddl(font_name = Font_name,
@@ -96,7 +98,7 @@ if __name__ == "__main__" :
                                      duration_log = Duration_log,
                                      glyph_box = Glyph_box,
                                      name = Name,
-                                     rhythmic_event_dimension = Note_head_height,
+                                     rhythmic_event_dimension = Rhythmic_head_height,
                                      dimension = 'height')
 
   if not MANUAL_DDL :
@@ -125,12 +127,12 @@ if __name__ == "__main__" :
   trans.commit()
 
   NOW = time.time()
-  for row in conn.execute(select([Note_head_width])).fetchall() :
+  for row in conn.execute(select([Rhythmic_head_width])).fetchall() :
     print row
 
   print "*"*40
   
-  for row in conn.execute(select([Note_head_height])).fetchall() :
+  for row in conn.execute(select([Rhythmic_head_height])).fetchall() :
     print row
   
   #manager.update(conn, Duration, {'num':100, 'den':1}, Duration.c.id == 4, MANUAL_DDL)

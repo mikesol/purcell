@@ -68,7 +68,9 @@ def generate_ddl(name, font_name, font_size, key_signature, key_signature_inter_
   #del_stmt = _Delete(width, name)
   del_stmt = _Delete(width)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  when = EasyWhen(font_name,name, key_signature)
+
+  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
      for table in [font_name, key_signature, key_signature_inter_accidental_padding, name]]
 

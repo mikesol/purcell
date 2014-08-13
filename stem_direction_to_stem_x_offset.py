@@ -11,22 +11,22 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, stem_x_offset, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, note_head_width, stem_direction, stem_x_offset) :
+  def __init__(self, rhythmic_head_width, stem_direction, stem_x_offset) :
     InsertStmt.__init__(self)
-    self.note_head_width = note_head_width
+    self.rhythmic_head_width = rhythmic_head_width
     self.stem_direction = stem_direction
     self.stem_x_offset = stem_x_offset
 
   def _generate_stmt(self, id) : 
-    note_head_width = self.note_head_width
+    rhythmic_head_width = self.rhythmic_head_width
     stem_direction = self.stem_direction
     stem_x_offset = self.stem_x_offset
 
     stem_direction_to_stem_x_offset = select([
       stem_direction.c.id.label('id'),
-      case([(stem_direction.c.val > 0, note_head_width.c.val)], else_ = 0.0).label('val')
+      case([(stem_direction.c.val > 0, rhythmic_head_width.c.val)], else_ = 0.0).label('val')
     ]).\
-      where(stem_direction.c.id == note_head_width.c.id).\
+      where(stem_direction.c.id == rhythmic_head_width.c.id).\
       where(safe_eq_comp(stem_direction.c.id, id)).\
     cte(name='stem_direction_to_stem_x_offset')
 
@@ -34,16 +34,16 @@ class _Insert(InsertStmt) :
 
     self.insert = simple_insert(stem_x_offset, stem_direction_to_stem_x_offset)
 
-def generate_ddl(note_head_width, stem_direction, stem_x_offset) :
+def generate_ddl(rhythmic_head_width, stem_direction, stem_x_offset) :
   OUT = []
 
-  insert_stmt = _Insert(note_head_width, stem_direction, stem_x_offset)
+  insert_stmt = _Insert(rhythmic_head_width, stem_direction, stem_x_offset)
 
   del_stmt = _Delete(stem_x_offset)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [note_head_width, stem_direction]]
+     for table in [rhythmic_head_width, stem_direction]]
 
   return OUT
 
@@ -61,7 +61,7 @@ if __name__ == "__main__" :
   conn = engine.connect()
   generate_sqlite_functions(conn)
 
-  manager = DDL_manager(generate_ddl(note_head_width = Note_head_width,
+  manager = DDL_manager(generate_ddl(rhythmic_head_width = Rhythmic_head_width,
                                      stem_direction = Stem_direction,
                                      stem_x_offset = Stem_x_offset))
 
@@ -75,7 +75,7 @@ if __name__ == "__main__" :
 
   for x in range(10) :
     stmts.append((Stem_direction, {'id': x,'val': -1 if x < 5 else 1}))
-    stmts.append((Note_head_width, {'id':x,'val': 5.0}))
+    stmts.append((Rhythmic_head_width, {'id':x,'val': 5.0}))
 
   trans = conn.begin()
   for st in stmts :
