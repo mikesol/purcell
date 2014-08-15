@@ -6,10 +6,12 @@ purcell.GLOBAL_OCTAVE = 0;
 purcell.GLOBAL_ACCIDENTAL = null;
 purcell.GLOBAL_BEAM = null;
 purcell.GLOBAL_BEAM_FLAG = false;
+purcell.GLOBAL_DYNAMIC = null;
 purcell.GLOBAL_DURATION = -2;
 purcell.GLOBAL_X_SHIFT = 30;
 purcell.MAX_X = 0;
 purcell.CURRENT_DATA = null;
+purcell.CURRENT_SELECTED_OBJECT = null;
 purcell.shiftX = function(v) {
   if (v == null) {
     purcell.GLOBAL_X_SHIFT = 30;
@@ -27,31 +29,76 @@ purcell.shiftX = function(v) {
 }
 purcell.updateCurrentPitch = function() {
   $("#currentPitch").text("C D E F G A B R |".split(" ")[purcell.GLOBAL_NOTE]);
-  $("#currentPitch").css('width',
-  "40px").css("display","inline-block").css("text-align","center").css("color","red");
+  $("#currentPitch").css('width', "40px").
+       css("display","inline-block").
+       css("text-align","center").
+       css("color","red");
 }
 purcell.updateCurrentRhythm = function() {
   $("#currentRhythm").text(['\ue1d2','\ue1d3','\ue1d5','\ue1d7',
-     '\ue1d9','\ue1db','\ue1dd','\ue1df'][purcell.GLOBAL_DURATION * -1]);
-  $("#currentRhythm").css('font-family', 'Bravura').css('width',
-  "20px").css("display","inline-block").css("text-align","center").css("color","red");
+                            '\ue1d9','\ue1db','\ue1dd','\ue1df'][purcell.GLOBAL_DURATION * -1]);
+  $("#currentRhythm").css('font-family', 'Bravura')
+      .css('width', "20px")
+      .css("display","inline-block")
+      .css("text-align","center")
+      .css("color","red");
 }
 purcell.updateCurrentAccidental = function() {
-  $("#currentAccidental").text(['\u25a1','\ue260','\ue261','\ue262'
+  $("#currentAccidental").text(['\u2205','\ue260','\ue261','\ue262'
      ][purcell.GLOBAL_ACCIDENTAL == null ?
      0 : purcell.GLOBAL_ACCIDENTAL + 2]);
-  $("#currentAccidental").css('font-family', 'Bravura').css('width',
-  "20px").css("display","inline-block").css("text-align","center").css("color","red");
+  $("#currentAccidental").css('font-family', 'Bravura')
+      .css('width', "20px")
+      .css("display","inline-block")
+      .css("text-align","center")
+      .css("color","red");
 }
 purcell.updateCurrentOctave = function() {
   $("#currentOctave").text(purcell.GLOBAL_OCTAVE);
-  $("#currentOctave").css('width',
-  "40px").css("display","inline-block").css("text-align","center").css("color","red");
+  $("#currentOctave").css('width', "40px")
+       .css("display","inline-block")
+       .css("text-align","center")
+       .css("color","red");
 }
 purcell.updateCurrentBeam = function() {
   $("#currentBeam").text(purcell.GLOBAL_BEAM_FLAG ? "ON" : "OFF");
-  $("#currentBeam").css('width',
-  "80px").css("display","inline-block").css("text-align","center").css("color","red");
+  $("#currentBeam").css('width', "80px")
+      .css("display","inline-block")
+      .css("text-align","center")
+      .css("color","red");
+}
+purcell.updateCurrentDynamic = function() {
+  console.log("GD", purcell.GLOBAL_DYNAMIC);
+  $("#currentDynamic").text({
+    null : '\u2205',
+    'pppppp': "\uE527",
+    'ppppp': "\uE528",
+    'pppp': "\uE529",
+    'ppp': "\uE52A",
+    'pp': "\uE52B",
+    'p': "\uE520",
+    'mp': "\uE52C",
+    'mf': "\uE52D",
+    'p': "\uE520",
+    'pf': "\uE52E",
+    'f': "\uE522",
+    'ff': "\uE52F",
+    'fff': "\uE530",
+    'ffff': "\uE531",
+    'fffff': "\uE532",
+    'ffffff': "\uE533",
+    'fp': "\uE534",
+    'fz': "\uE535",
+    'sf': "\uE536",
+    'sfp': "\uE537",
+    'sfpp': "\uE538",
+    'sfz': "\uE539"
+     }[purcell.GLOBAL_DYNAMIC]);
+  $("#currentDynamic").css('font-family', 'Bravura')
+      .css('width', "20px")
+      .css("display","inline-block")
+      .css("text-align","center")
+      .css("color","red");
 }
 purcell.addNoteN = function(v) {
   if (purcell.s_(purcell.MAX_X) > 400) {
@@ -60,7 +107,11 @@ purcell.addNoteN = function(v) {
   }
   purcell.GLOBAL_NOTE = v;
   purcell.updateCurrentPitch();
-  purcell.increment_and_execute("purcell.addNote_2");
+  var out = [];
+  if (purcell.GLOBAL_DYNAMIC != null) {
+    out = purcell.dynamic_increment(out);
+  }
+  purcell.increment_and_execute("purcell.addNote_2",out);
   $('#spinny').spin(); // Creates a default Spinner using the text color
 }
 purcell.addBarLineN = function() {
@@ -78,6 +129,10 @@ purcell.changeAccidental = function(v) {
 purcell.changeOctave = function(v) {
   purcell.GLOBAL_OCTAVE += v;
   purcell.updateCurrentOctave();
+}
+purcell.changeDynamic= function(v) {
+  purcell.GLOBAL_DYNAMIC = v;
+  purcell.updateCurrentDynamic();
 }
 purcell.beamOn = function() {
   purcell.GLOBAL_BEAM_FLAG = true;
@@ -154,8 +209,23 @@ purcell.get_last_used_item = function() {
     return "SELECT max(used_ids.id) FROM used_ids;";
 }
 
-purcell.increment_and_execute = function(subsequent) {
-  var out = [];
+purcell.dynamic_increment = function(out) {
+  out = out != null ? out : [];
+  out.push({
+    expected : [],
+    sql : purcell.increment_last_used_item()
+  });
+  out.push({
+    name : 'dynamic_id',
+    expected : ['id'],
+    sql : purcell.get_last_used_item()
+  });
+  return out;
+}
+
+purcell.increment_and_execute = function(subsequent, out) {
+  console.log('IEX', out);
+  out = out != null ? out : [];
   out.push({
     expected : [],
     sql : purcell.increment_last_used_item()
@@ -176,6 +246,7 @@ purcell.increment_and_execute = function(subsequent) {
     expected : ['id'],
     sql : "SELECT graphical_next.prev FROM graphical_next WHERE graphical_next.next IS NULL;"
   });
+  console.log("AAHHHHHH", out);
   out = {client:purcell.MY_NAME, sql:out, 'return': purcell._be(purcell.MY_NAME), subsequent: subsequent};
   purcell.WS.send(JSON.stringify(out));
 }
@@ -251,10 +322,54 @@ purcell.addNote_2 = function(data) {
     expected : [],
     sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+next+","+prev+",NULL);"
   });
+  console.log("checking data for dynamic id", data);
+  if (data.dynamic_id != null) {
+    out = purcell.add_dynamic(data.dynamic_id[0]['id'], next, out);
+  }
   purcell.append_standard_graphical_queries(out);
   out = {client:purcell.MY_NAME, sql:out, 'return': "*", subsequent: "purcell.draw"};
   ///////////////////////////
   purcell.WS.send(JSON.stringify(out));
+}
+purcell.add_dynamic = function(dynamic_id, note_id, out) {
+  out.push({
+    expected : [],
+    sql : purcell.build_simple_insert('font_name',{id:dynamic_id,
+    val : "'Bravura'"})
+  });
+  out.push({
+    expected : [],
+    sql : purcell.build_simple_insert('font_size',{id:dynamic_id, val : 20})
+  });
+  out.push({
+    expected : [],
+    sql : purcell.build_simple_insert('anchor_x',{id:dynamic_id,
+    // hmmm...
+    val : note_id})
+  });
+  out.push({
+    expected : [],
+    sql : purcell.build_simple_insert('dynamic',{id:dynamic_id,
+    // hmmm...
+    val : "'"+purcell.GLOBAL_DYNAMIC+"'"})
+  });
+  out.push({
+    expected : [],
+    sql : purcell.build_simple_insert('dynamic_direction',{id:dynamic_id,
+    // hmmm...
+    val : -1})
+  });
+  out.push({
+    expected : [],
+    sql : purcell.build_simple_insert('x_position',{id:dynamic_id,
+    val : 0.0})
+  });
+  out.push({
+    expected : [],
+    sql : purcell.build_simple_insert('staff_symbol',{id:dynamic_id,
+    val : 1})
+  });
+  return out;
 }
 purcell.addBarLine = function(data) {
   console.log("data going to adBarLine", data);
@@ -295,30 +410,30 @@ purcell.addBarLine = function(data) {
 }
 purcell.table_to_columns = function(name) {
   if (name == "line_stencil") {
-    return "line_stencil.id, line_stencil.x0, line_stencil.y0, line_stencil.x1, line_stencil.y1, line_stencil.thickness";
+    return "line_stencil.id, line_stencil.sub_id, line_stencil.x0, line_stencil.y0, line_stencil.x1, line_stencil.y1, line_stencil.thickness";
   } else if (name == "glyph_stencil") {
-    return "glyph_stencil.id, glyph_stencil.font_name, glyph_stencil.font_size, glyph_stencil.unicode, glyph_stencil.x, glyph_stencil.y";
+    return "glyph_stencil.id, glyph_stencil.sub_id, glyph_stencil.font_name, glyph_stencil.font_size, glyph_stencil.unicode, glyph_stencil.x, glyph_stencil.y";
   } else if (name == "polygon_stencil") {
     return "polygon_stencil.id, polygon_stencil.sub_id, polygon_stencil.point, polygon_stencil.x, polygon_stencil.y, polygon_stencil.thickness, polygon_stencil.stroke, polygon_stencil.fill";
   }
 }
 purcell.stencil_sql_request = function(name) {
-  var out = "SELECT " + purcell.table_to_columns(name) + ", x_position.val, y_position.val FROM " + name + " LEFT JOIN x_position ON " + name + ".id = x_position.id LEFT JOIN y_position ON " + name + ".id = y_position.id";
-  return out + ";"
+  var out = "SELECT " + purcell.table_to_columns(name) + ", anchored_x_position.val, anchored_y_position.val, name.val FROM " + name + " LEFT JOIN anchored_x_position ON " + name + ".id = anchored_x_position.id LEFT JOIN anchored_y_position ON " + name + ".id = anchored_y_position.id LEFT JOIN name ON " + name + ".id = name.id";
+  return out + ";";
 }
 purcell.append_standard_graphical_queries = function(out) {
   out.push({
     name : 'line_stencil',
-    expected : ['id', 'x0', 'y0',
+    expected : ['id', 'sub_id', 'x0', 'y0',
     'x1', 'y1', 'thickness',
-    'x_position', 'y_position'],
+    'x_position', 'y_position','name'],
     sql : purcell.stencil_sql_request('line_stencil')
   });
   out.push({
     name : 'glyph_stencil',
-    expected : ['id', 'font_name', 'font_size',
+    expected : ['id', 'sub_id', 'font_name', 'font_size',
     'unicode', 'x', 'y',
-    'x_position', 'y_position'],
+    'x_position', 'y_position','name'],
     sql : purcell.stencil_sql_request('glyph_stencil')
   });
   out.push({
@@ -326,14 +441,33 @@ purcell.append_standard_graphical_queries = function(out) {
     expected : ['id', 'sub_id', 'point',
     'x', 'y',
     'thickness', 'stroke', 'fill',
-    'x_position','y_position'],
+    'x_position','y_position','name'],
     sql : purcell.stencil_sql_request('polygon_stencil')
   });
   out.push({
     name : 'max_x',
     expected : ['x'],
-    sql : "SELECT max(x_position.val) FROM x_position;"
+    sql : "SELECT max(anchored_x_position.val) FROM anchored_x_position;"
   });
+}
+
+purcell.makeCurrentSelectedObjectColor = function(c) {
+  var elt = purcell.$nap.select('#'+purcell.CURRENT_SELECTED_OBJECT);
+  if (elt.attr('fill') != 'none') {
+    elt.attr({fill : c})
+  }
+  if (elt.attr('stroke') != 'none') {
+    console.log(elt.attr('stroke'))
+    elt.attr({stroke : c})
+  }  
+}
+purcell.registerAsClicked = function(id) {
+  //console.log("SOMETHING",elt, $(elt).attr('id'));
+  if (purcell.CURRENT_SELECTED_OBJECT) {
+    purcell.makeCurrentSelectedObjectColor('black');
+  }
+  purcell.CURRENT_SELECTED_OBJECT = id;
+  purcell.makeCurrentSelectedObjectColor('red');
 }
 purcell.draw = function(data) {
   console.log("data going to draw", data)
@@ -345,22 +479,32 @@ purcell.draw = function(data) {
     console.log("making line", line);
     var x = line['x_position'] ? line['x_position'] : 0.0;
     var y = line['y_position'] ? line['y_position'] : 0.0;
-    _gr0up.line(purcell.st_x(line['x0'] + x), purcell.st_y(line['y0'] + y),
+    var name = line['name'] ? line['name'] : '';
+    var s_line = _gr0up.line(purcell.st_x(line['x0'] + x), purcell.st_y(line['y0'] + y),
                purcell.st_x(line['x1'] + x), purcell.st_y(line['y1'] + y)).attr({
        stroke : 'black',
-       strokeWidth : purcell.s_(line['thickness'])
+       strokeWidth : purcell.s_(line['thickness']),
+       'id' : name+'_line_'+line['id']+'_'+line['sub_id'],
     });
+    s_line.click(function() { return function() { purcell.registerAsClicked(s_line) } });
   }        
   for (var i = 0; i < data.glyph_stencil.length; i++) {
-    var glyph = data.glyph_stencil[i];
-    var x = glyph['x'] + (glyph['x_position'] ? glyph['x_position'] : 0.0);
-    var y = glyph['y'] + (glyph['y_position'] ? glyph['y_position'] : 0.0);
-    uc = String.fromCharCode(parseInt(glyph['unicode'].substr(2), 16));
-    //console.log(context.font, glyph[3], uc);
-    _gr0up.text(purcell.st_x(x), purcell.st_y(y), uc).attr({
-      "font-family" : glyph['font_name'],
-      "font-size" : glyph['font_size']
-    });
+    var closure = function () {
+      var glyph = data.glyph_stencil[i];
+      console.log("making glyph", glyph);
+      var x = glyph['x'] + (glyph['x_position'] ? glyph['x_position'] : 0.0);
+      var y = glyph['y'] + (glyph['y_position'] ? glyph['y_position'] : 0.0);
+      uc = String.fromCharCode(parseInt(glyph['unicode'].substr(2), 16));
+      var name = line['name'] ? line['name'] : '';
+      //console.log(context.font, glyph[3], uc);
+      var s_glyph = _gr0up.text(purcell.st_x(x), purcell.st_y(y), uc).attr({
+        "font-family" : glyph['font_name'],
+        "font-size" : glyph['font_size'],
+         'id' : name+'_glyph_'+glyph['id']+'_'+glyph['sub_id'],
+      });
+      s_glyph.click(function() { purcell.registerAsClicked(s_glyph.attr('id'))  } );
+    };
+    closure();
   }
   var polygon_holder = {};
   for (var i = 0; i < data.polygon_stencil.length; i++) {
@@ -390,13 +534,21 @@ purcell.draw = function(data) {
       for (var i = 0; i < polygon_holder[key][sub_key].length; i++) {
         path = path + ((i == 0 ? 'M' : 'L') + " " + purcell.st_x(polygon_holder[key][sub_key][i].x) + " " + purcell.st_y(polygon_holder[key][sub_key][i].y)+ " ");
       }
+      var name = polygon_holder[key][sub_key][0]['name'] ? line['name'] : '';
       var thick = polygon_holder[key][sub_key][0].thickness ? polygon_holder[key][sub_key][0].thickness : 0.0; 
-      _gr0up.path(path).attr({
+      var s_polygon = _gr0up.path(path).attr({
         fill : polygon_holder[key][sub_key][0].fill == 1 ? true : false,
         stroke : 'black',
-        strokeWidth : polygon_holder[key][sub_key][0].stroke * thick
-      });
+        strokeWidth : polygon_holder[key][sub_key][0].stroke * thick,
+       'id' : name+'_polygon_'+polygon['id']+'_'+polygon['sub_id'],
+      }).click(purcell.registerAsClicked);
+      s_polygon.click(function() { return function() { purcell.registerAsClicked(s_polygon) } });
     }
+    
+  }
+  console.log("CSO", purcell.CURRENT_SELECTED_OBJECT);
+    if (purcell.CURRENT_SELECTED_OBJECT) {
+      purcell.makeCurrentSelectedObjectColor('red');
   }
   $('#spinny').spin(false); // Stops and removes the spinner.
 }
@@ -429,4 +581,5 @@ purcell.initialize = function() {
   purcell.updateCurrentAccidental();
   purcell.updateCurrentOctave();
   purcell.updateCurrentBeam();
+  purcell.updateCurrentDynamic();
 }

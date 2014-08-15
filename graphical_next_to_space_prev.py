@@ -81,7 +81,8 @@ def _NOTE_BAR(name_left, name_right, right_width, width_right) :
 
 # for now...
 def _base_space(duration) :
-  return case([(duration.c.num * 1.0 / duration.c.den > 0.25, 10.0), (duration.c.num * 1.0 / duration.c.den > 0.125, duration.c.num * 40.0 / duration.c.den)], else_ = 5.0)
+  #return case([(duration.c.num * 1.0 / duration.c.den > 0.25, 10.0), (duration.c.num * 1.0 / duration.c.den > 0.125, duration.c.num * 40.0 / duration.c.den)], else_ = 5.0)
+  return case([(duration.c.val > 0.24, 10.0), (duration.c.val > 0.124, duration.c.val)], else_ = 5.0)
 
 def _NOTE_NOTE(name_left, name_right, duration, right_width, left_width) :
   base_space = _base_space(duration)

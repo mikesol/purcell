@@ -11,14 +11,15 @@ _ALL_NAMES = ['TS', 'KEY', 'CLEF', 'NOTE']
 
 class _Delete(DeleteStmt) :
   def __init__(self, space_prev, x_position) :
-    def where_clause_fn(id) :
-      ''''
-      strain = bound_range(id, space_prev)
-      stmt = select([strain]).where(strain.c.elt == x_position.c.id)
-      stmt = exists(stmt)
-      return stmt
-      '''
-      return x_position.c.val != 3.1416
+    def where_clause_fn(id) :      
+      stmt = select([literal(id).label('id')]).cte(name="anchors", recursive=True)
+      stmt_prev = stmt.alias(name='stmt_prev')
+      stmt = stmt.union_all(
+        select([
+          space_prev.c.id
+        ]).where(stmt_prev.c.id == space_prev.c.prev)
+      )
+      return exists(select([stmt.c.id]).where(x_position.c.id == stmt.c.id))
     DeleteStmt.__init__(self, x_position, where_clause_fn)
 
 class _Insert(InsertStmt) :
@@ -31,16 +32,51 @@ class _Insert(InsertStmt) :
     space_prev = self.space_prev
     x_position = self.x_position
 
+    '''
     space_prev_heads = select([
       space_prev.c.id.label('id'),
     ]).where(space_prev.c.prev == None).\
          cte(name="space_prev_heads")
 
     self.register_stmt(space_prev_heads)
+    '''
+    first_position_runner = select([
+      space_prev.c.id.label('id'),
+      space_prev.c.prev.label('prev'),
+      literal(0).label('counter'),
+      x_position.c.val.label('val')
+    ]).select_from(space_prev.outerjoin(x_position, onclause = space_prev.c.id == x_position.c.id)).\
+      where(safe_eq_comp(space_prev.c.id, id)).\
+      where(x_position.c.val == None).\
+      cte(name='first_position_runner', recursive = True)
 
-    start_of_chain = select([space_prev_heads.c.id.label('id'),
-    space_prev.c.val.label('val'),
-    ]).where(space_prev.c.id == space_prev_heads.c.id).\
+    self.register_stmt(first_position_runner)
+    first_position_runner_prev = first_position_runner.alias(name="first_position_runner_prev")
+
+    first_position_runner = first_position_runner.union_all(select([
+      space_prev.c.id.label('id'),
+      space_prev.c.prev.label('prev'),
+      (first_position_runner_prev.c.counter + 1).label('counter'),
+      x_position.c.val.label('val')
+    ]).select_from(space_prev.outerjoin(x_position, onclause = space_prev.c.id == x_position.c.id)).\
+      where(space_prev.c.id == first_position_runner_prev.c.prev).\
+      where(x_position.c.val == None))
+
+    self.register_stmt(first_position_runner)
+    first_position_runner_max_counter =\
+      select([func.max(first_position_runner.c.counter).label('max')]).cte(name="max_counter")
+ 
+    self.register_stmt(first_position_runner_max_counter)
+
+    starting_id = select([
+      first_position_runner.c.id.label('id')
+    ]).where(first_position_runner.c.counter == first_position_runner_max_counter.c.max).cte(name="starting_id")
+
+    start_of_chain = select([#space_prev_heads.c.id.label('id'),
+      starting_id.c.id.label('id'),
+      (space_prev.c.val + case([(x_position.c.val != None, x_position.c.val)], else_=0)).label('val'),
+    ]).select_from(space_prev.outerjoin(x_position, onclause = space_prev.c.prev == x_position.c.id)).\
+       where(space_prev.c.id == starting_id.c.id).\
        cte(name='all_x_position',recursive=True)
 
     self.register_stmt(start_of_chain)
@@ -56,11 +92,8 @@ class _Insert(InsertStmt) :
 
     self.register_stmt(all_x_position)
 
-    giant_kludge = realize(all_x_position, x_position, 'val')
 
-    self.register_stmt(giant_kludge)
-
-    self.insert = simple_insert(x_position, giant_kludge)
+    self.insert = simple_insert(x_position, all_x_position)
 
 def generate_ddl(space_prev, x_position) :
 
@@ -112,7 +145,8 @@ if __name__ == "__main__" :
     #  stmts.append((Graphical_next, {'id':x, 'prev' : x-1, 'next':None}))
     #else :
     #  stmts.append((Graphical_next, {'id':x, 'next':x+1, 'prev':x-1}))
-    stmts.append((Space_prev, {'id' : x, 'val' : x * 3.0}))
+    #stmts.append((Space_prev, {'id' : x, 'prev': x+1 if x != (BIG - 1) else None, 'val' : x * 3.0}))
+    stmts.append((Space_prev, {'id' : x, 'prev': x-1 if x != 0 else None, 'val' : x * 3.0}))
 
   print "gn"    
 

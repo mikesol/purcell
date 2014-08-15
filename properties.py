@@ -1,5 +1,5 @@
 from sqlalchemy import Integer, Float, String, Column
-from plain import make_table, make_table_generic, Fraction, Spanner
+from plain import make_table, make_table_generic, Fraction, Spanner, Box, Point
 import plain
 
 Score = make_table('score', Integer)
@@ -50,7 +50,8 @@ Staff_position = make_table('staff_position', Float)
 ### derived tables
 
 # the full duration of an event
-Duration = make_table('duration', Fraction)
+#Duration = make_table('duration', Fraction)
+Duration = make_table('duration', Float)
 
 # the onset of an event
 Local_onset = make_table('local_onset', Fraction)
@@ -93,12 +94,23 @@ Stem_end = make_table('stem_end', Float)
 Beam_x_position = make_table('beam_x_position', Spanner)
 Beam_y_position = make_table('beam_y_position', Spanner)
 
+Anchor = make_table('anchor', Integer)
+Anchor_x = make_table('anchor_x', Integer)
+Anchor_y = make_table('anchor_y', Integer)
+
 Rhythmic_head_width = make_table('rhythmic_head_width', Float)
 Rhythmic_head_height = make_table('rhythmic_head_height', Float)
 Dot_width = make_table('dot_width', Float)
 Accidental_width = make_table('accidental_width', Float)
 Left_width = make_table('left_width', Float)
 Right_width = make_table('right_width', Float)
+Note_box = make_table('note_box', Box)
+
+Dynamic_padding = make_table('dynamic_padding', Float)
+Dynamic = make_table('dynamic', String)
+Dynamic_direction = make_table('dynamic_direction', Integer)
+Dynamic_staff_position = make_table('dynamic_staff_position', Float)
+
 Width = make_table('width', Float)
 Height = make_table('height', Float)
 
@@ -106,8 +118,11 @@ Space_prev = make_table_generic('space_prev',
   [Column('id', Integer, primary_key=True, index=plain._GLOBAL_INDEX),
    Column('prev',Integer), Column('val',Float, index=plain._GLOBAL_INDEX),])
 
+Alignment_directive = make_table('alignment_directive', Point)
 X_position = make_table('x_position', Float)
 Y_position = make_table('y_position', Float)
+Anchored_x_position = make_table('anchored_x_position', Float)
+Anchored_y_position = make_table('anchored_y_position', Float)
 
 Graphical_next = make_table_generic('graphical_next', [
       Column('id', Integer, primary_key = True, index=plain._GLOBAL_INDEX),

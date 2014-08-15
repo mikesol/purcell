@@ -11,12 +11,14 @@ class _Delete(DeleteStmt) :
     DeleteStmt.__init__(self, natural_stem_direction, where_clause_fn)
 
 class _Insert(InsertStmt) :
-  def __init__(self, staff_position, natural_stem_direction) :
+  def __init__(self, name, staff_position, natural_stem_direction) :
     InsertStmt.__init__(self)
+    self.name = name
     self.staff_position = staff_position
     self.natural_stem_direction = natural_stem_direction
 
   def _generate_stmt(self, id) : 
+    name = self.name
     staff_position = self.staff_position
     natural_stem_direction = self.natural_stem_direction
 
@@ -25,24 +27,26 @@ class _Insert(InsertStmt) :
       case([(staff_position.c.val > 0, -1)], else_ = 1).label('val')
     ]).\
       where(safe_eq_comp(staff_position.c.id, id)).\
+      where(name.c.id == staff_position.c.id).\
+      where(name.c.val == 'note').\
     cte(name='duration_log_to_natural_stem_directions')
 
     self.register_stmt(duration_log_to_natural_stem_directions)
 
     self.insert = simple_insert(natural_stem_direction, duration_log_to_natural_stem_directions)
 
-def generate_ddl(staff_position, natural_stem_direction) :
+def generate_ddl(name, staff_position, natural_stem_direction) :
   OUT = []
 
-  insert_stmt = _Insert(staff_position, natural_stem_direction)
+  insert_stmt = _Insert(name, staff_position, natural_stem_direction)
 
   del_stmt = _Delete(natural_stem_direction)
   
-  when = EasyWhen(staff_position)
+  when = EasyWhen(name, staff_position)
 
   OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt], when_clause = when)
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [staff_position]]
+     for table in [name, staff_position]]
 
   return OUT
 
@@ -60,7 +64,8 @@ if __name__ == "__main__" :
   conn = engine.connect()
   generate_sqlite_functions(conn)
 
-  manager = DDL_manager(generate_ddl(staff_position = Staff_position,
+  manager = DDL_manager(generate_ddl(name = Name,
+                            staff_position = Staff_position,
                                      natural_stem_direction = Natural_stem_direction))
 
   if not MANUAL_DDL :
@@ -72,6 +77,7 @@ if __name__ == "__main__" :
   stmts = []
 
   for x in range(10) :
+    stmts.append((Name, {'id': x,'val': 'note'}))
     stmts.append((Staff_position, {'id': x,'val': (x/2.0) - 2.5}))
 
   trans = conn.begin()

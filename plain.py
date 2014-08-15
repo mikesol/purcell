@@ -21,10 +21,15 @@ def _randString(length=16, chars=string.letters):
 def almost_equal(x,y) :
   return abs(x-y) < 10E-16
 
+def sql_mod(x,y) :
+  return case([(x==y, 0)], else_=(x+(x/y)) & y);
+
 _metadata = MetaData()
 
 class Fraction : pass
 class Spanner : pass
+class Box : pass
+class Point : pass
 
 ###
 class DummyConnection(object) :
@@ -54,6 +59,22 @@ def make_table(name, tp, unique = False) :
                      [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
                      Column('left', Float, index=_GLOBAL_INDEX),
                      Column('right', Float, index=_GLOBAL_INDEX)])
+  if tp == Box :
+    # unique not possible
+    return make_table_generic(name,
+                     [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
+                     Column('x', Float, index=_GLOBAL_INDEX),
+                     Column('y', Float, index=_GLOBAL_INDEX),
+                     Column('width', Float, index=_GLOBAL_INDEX),
+                     Column('height', Float, index=_GLOBAL_INDEX),
+                     ])
+  if tp == Point :
+    # unique not possible
+    return make_table_generic(name,
+                     [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
+                     Column('x', Float, index=_GLOBAL_INDEX),
+                     Column('y', Float, index=_GLOBAL_INDEX),
+                     ])
   return Table(name, _metadata,
                      Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
                      Column('val', tp, unique = unique, index=_GLOBAL_INDEX))
@@ -91,43 +112,6 @@ String_box = Table('string_box', _metadata,
   Column('width', Integer),
   Column('height', Integer)
   )
-
-class JoinK(object) :
-  def __init__(self, table) :
-    self.table = table
-
-class Join(JoinK) : pass
-class Outerjoin(JoinK) : pass
-
-def easy_sj(l, use_id = False, extras=[]) :
-  to_join = filter(lambda x : isinstance(x, Table) or isinstance(x,JoinK), l)
-  return easy_join(easy_select(l, use_id), to_join + extras)
-
-def easy_select(l, use_id = False) :
-  vals = []
-  for t in l :
-    maybe_table = t
-    if isinstance(t, JoinK) :
-      maybe_table = t.table
-    if isinstance(maybe_table, Table) :
-      to_use = filter(lambda col : col.name != 'id', maybe_table.c)
-      for col in to_use :
-        vals.append(col.label(maybe_table.name+'_'+col.name))
-    else :
-      vals.push_back(t)
-  if use_id :
-    vals = [l[0].c.id.label('id')] + vals
-  return select(vals)
-
-def easy_join(stmt, lTables) :
-  joins = lTables[0]
-  for table in lTables[1:] :
-    joink = table if isinstance(table, JoinK) else Join(table)
-    joins = getattr(joins, 'join' if isinstance(joink, Join) else 'outerjoin' )(joink.table, onclause = joink.table.c.id == lTables[0].c.id)
-  return stmt.select_from(joins)
-
-def and_eq(table1, table2, vals) :
-  return and_(*[table1.c[x] == table2.c[x] for x in vals])
 
 def product(row) :
   return func.exp(func.sum(func.ln(1.0 * row)))
@@ -173,14 +157,36 @@ def gcd_table(table) :
 
   modulo = modulo.union_all(
       select([
-          modulo_a.c.id + 1,
-          modulo_a.c.raw_id,
-          func.mod(modulo_a.c.den, modulo_a.c.num),
-          modulo_a.c.num
+          (modulo_a.c.id + 1).label('id'),
+          modulo_a.c.raw_id.label('raw_id'),
+          func.mod(modulo_a.c.den, modulo_a.c.num).label('num'),
+          modulo_a.c.num.label('den')
       ]).
           where(modulo_a.c.num > 0)
   )
 
+  '''
+  modulo = modulo.union_all(
+      select([
+          (modulo_a.c.id + 1).label('id'),
+          modulo_a.c.raw_id.label('raw_id'),
+          case([(modulo_a.c.den >= modulo_a.c.num, modulo_a.c.num)], else_= modulo_a.c.den).label('num'),
+          case([(modulo_a.c.den >= modulo_a.c.num, modulo_a.c.den - modulo_a.c.num)], else_=modulo_a.c.num).label('den')
+      ]).
+          where(modulo_a.c.num > 0)
+  )
+  '''
+  '''
+  modulo = modulo.union_all(
+      select([
+          (modulo_a.c.id + 1).label('id'),
+          modulo_a.c.raw_id.label('raw_id'),
+          func.kludge_0(modulo_a.c.num, modulo_a.c.den).label('num'),
+          func.kludge_1(modulo_a.c.num, modulo_a.c.den).label('den')
+      ]).
+          where(modulo_a.c.num > 0)
+  )
+  '''
   stmt = select([table.c.id.label('id'),
                  (table.c.num / modulo.c.den).label('num'),
                  (table.c.den / modulo.c.den).label('den')]).\
@@ -208,10 +214,24 @@ def generate_sqlite_functions(conn) :
   def my_mod(in_val_0, in_val_1) :
     #print in_val_0, in_val_1, "MOD"
     return in_val_0 % in_val_1
+    #out = (in_val_0+(in_val_0/in_val_1)) & in_val_1
+    #if in_val_0 == in_val_1 :
+    #  out = 0
+    #print in_val_0, in_val_1, out, "MOD", in_val_0 % in_val_1
+    #return out
+  def kludge_0(num, den) :
+    print "K0", num, den, num if den >= num else den
+    return den - num if den >= num else den
+  def kludge_1(num, den) :
+    print "K1", num, den, den if den >= num else num
+    return den - num if den >= num else num
+
   conn.connection.create_function('ln', 1, my_ln)
   conn.connection.create_function('exp', 1, my_exp)
   conn.connection.create_function('pow', 2, my_pow)
   conn.connection.create_function('mod', 2, my_mod)
+  conn.connection.create_function('kludge_0', 2, kludge_0)
+  conn.connection.create_function('kludge_1', 2, kludge_1)
 
 # debug before
 # debug after

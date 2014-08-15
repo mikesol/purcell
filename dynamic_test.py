@@ -2,7 +2,7 @@ _HOST_NAME = ''
 _PORT_NUMBER = 8000
 SSID = 1
 
-#import tuplet_to_factor
+import tuplet_to_factor
 import rhythmic_events_to_durations
 import clef_to_width
 import staff_position_to_y_position
@@ -30,7 +30,6 @@ import beam_to_beam_positions
 import beam_to_stencil
 import rest_to_staff_position
 import dynamic_to_staff_position
-import dynamic_to_unicode
 import dynamic_to_alignment_directive
 import rhythmic_head_width_to_note_box
 import anchor_to_dimensioned_anchor
@@ -76,8 +75,8 @@ from ws4py.manager import WebSocketManager
 LOG = True
 #ECHO = True
 ECHO = False
-MANUAL_DDL = False
-#MANUAL_DDL = True
+#MANUAL_DDL = False
+MANUAL_DDL = True
 TABLES_TO_REPORT = [Line_stencil, Glyph_stencil, String_stencil, X_position]
 GIGANTIC_TEST = False
 ugggghh = 100
@@ -85,7 +84,7 @@ ugggghh = 100
 T = True
 F = False
 
-#TUPLET_TO_FACTOR = T
+TUPLET_TO_FACTOR = T
 RHYTHMIC_EVENTS_TO_DURATIONS = T
 CLEF_TO_WIDTH = T
 STAFF_POSITION_TO_Y_POSITION = T
@@ -129,18 +128,16 @@ DYNAMIC_TO_STAFF_POSITION = T
 ANCHOR_TO_DIMENSIONED_ANCHOR = T
 POSITION_TO_ANCHORED_POSITION = T
 DYNAMIC_TO_ALIGNMENT_DIRECTIVE = T
-DYNAMIC_TO_UNICODE = T
 
 #engine = create_engine('postgresql://localhost/postgres', echo=False)
 engine = create_engine('sqlite:///memory', echo=ECHO)
 CONN = engine.connect()
 
-#generate_sqlite_functions(CONN)
+generate_sqlite_functions(CONN)
 
 manager = DDL_manager()
 
 ###############################
-'''
 if TUPLET_TO_FACTOR :
   manager.ddls += tuplet_to_factor.generate_ddl(
                     left_tuplet_bound = Left_tuplet_bound,
@@ -148,7 +145,7 @@ if TUPLET_TO_FACTOR :
                     time_next = Time_next,
                     tuplet_fraction = Tuplet_fraction,
                     tuplet_factor = Tuplet_factor)
-'''
+
 ###############################
 if RHYTHMIC_EVENTS_TO_DURATIONS :
   manager.ddls += rhythmic_events_to_durations.generate_ddl(duration_log = Duration_log,
@@ -370,10 +367,6 @@ if DYNAMIC_TO_ALIGNMENT_DIRECTIVE :
                      alignment_directive = Alignment_directive)
 
 ###############################
-if DYNAMIC_TO_UNICODE :
-  manager.ddls += dynamic_to_unicode.generate_ddl(dynamic=Dynamic, unicode=Unicode)
-
-###############################
 if DYNAMIC_TO_STAFF_POSITION :
   manager.ddls += dynamic_to_staff_position.generate_ddl(dynamic = Dynamic,
               anchor_x = Anchor_x,
@@ -407,8 +400,7 @@ if CLEF_TO_STENCIL :
                                      alignment_directive = Alignment_directive,
                                      glyph_stencil = Glyph_stencil,
                                      writer = 'clef_to_stencil',
-                                     extra_eq = [Name.c.val == 'clef', Name.c.id == Font_name.c.id]
-                                     )
+                                     extra_eq = [Name.c.val == 'clef', Name.c.id == Font_name.c.id])
 
 ###############################
 if DYNAMIC_TO_STENCIL :
@@ -420,7 +412,7 @@ if DYNAMIC_TO_STENCIL :
                                      alignment_directive = Alignment_directive,
                                      glyph_stencil = Glyph_stencil,
                                      writer = 'dynamic_to_stencil',
-                                     extra_eq = [Dynamic.c.id == Font_name.c.id])
+                                     extra_eq = [])
 
 ###############################
 if TIME_SIGNATURE_TO_STENCIL :
@@ -562,7 +554,7 @@ stmts = []
 # DEFAULTS
 # TODO - in separate file?
 stmts.append((Dot_padding, {'id': -1, 'val':1.0}))
-stmts.append((Dynamic_padding, {'id': -1, 'val':1.5}))
+stmts.append((Dynamic_padding, {'id': -1, 'val':1.0}))
 stmts.append((Rhythmic_event_to_dot_padding, {'id':-1, 'val': 1.0}))
 stmts.append((Rhythmic_event_to_accidental_padding, {'id':-1, 'val': 0.5}))
 stmts.append((Time_signature_inter_number_padding, {'id':-1, 'val': 0.0}))
@@ -597,7 +589,6 @@ stmts.append((Staff_position, {'id':2,'val':-1.0}))
 stmts.append((Pitch, {'id':2,'val':4}))
 stmts.append((Octave, {'id':2,'val':0}))
 
-'''
 # some notes and rests
 stmts.append((Name, {'id':3,'val':'note'}))
 stmts.append((Font_name, {'id':3,'val':'Bravura'}))
@@ -613,8 +604,10 @@ stmts.append((Font_name, {'id':4,'val':'Bravura'}))
 stmts.append((Font_size, {'id':4,'val':20}))
 stmts.append((Unicode, {'id':4,'val':"U+E52D"}))
 stmts.append((Dynamic_direction, {'id':4,'val':-1}))
-stmts.append((Anchor, {'id':4,'val':3}))
+stmts.append((Anchor_x, {'id':4,'val':3}))
+stmts.append((X_position, {'id':4,'val':0.0}))
 
+'''
 stmts.append((Name, {'id':4,'val':'rest'}))
 stmts.append((Font_name, {'id':4,'val':'Bravura'}))
 stmts.append((Font_size, {'id':4,'val':20}))
@@ -677,7 +670,7 @@ if GIGANTIC_TEST :
   
 else :
   #NEXT = [None, 2,1,0,3,4,5,10,6,7,8,None]
-  NEXT = [None, 2,0, None]
+  NEXT = [None, 2,0,3, None]
   for x in range(1, len(NEXT) - 1) :
     stmts.append((Graphical_next, {'id' : NEXT[x], 'next' : NEXT[x + 1], 'prev' : NEXT[x-1]}))
 
@@ -700,11 +693,11 @@ stmts.append((Line_thickness, {'id':SSID, 'val':0.13}))
 stmts.append((N_lines, {'id':SSID,'val':5}))
 stmts.append((Staff_space, {'id':SSID, 'val':1.0}))
 
-for x in NEXT :
+for x in NEXT + [4] :
   if x != None :
     stmts.append((Staff_symbol, {'id':x,'val':SSID}))
 
-for x in NEXT + [SSID] :
+for x in NEXT + [SSID, 4] :
   if x != None :
     stmts.append((Used_ids, {'id':x}))
 
@@ -717,6 +710,10 @@ for st in stmts :
   manager.insert(CONN, st[0].insert().values(**st[1]), MANUAL_DDL)
 trans.commit()
 
+for row in CONN.execute(select([Alignment_directive])).fetchall() :
+  print row
+
+sys.exit(1)
 #for row in CONN.execute(select([Space_prev])).fetchall() : print row
 #print "*"*80
 #for row in CONN.execute(select([X_position])).fetchall() : print row
@@ -781,29 +778,22 @@ class Engraver(WebSocket) :
       WSM[jobj['client']] = self
     out = {}
     for obj in jobj['sql'] :
-      #print obj
-      #print "evaluating :::", obj['sql']
-      # sometimes, we may have several requests rolled into one
-      # primitive system to handle that
-      statements = obj['sql'].split(';')
-      statements.remove('')
-      for statement in statements :
-        try :
-          print "evaluating :::", statement+";"
-          result = CONN.execute(text(statement+";"))
-          if obj['expected'] != [] :
-            out[obj['name']] = []
-            for row in result.fetchall() :
-              to_append = {} if obj['expected'] else []
-              #print obj['expected'], row
-              for x in range(len(row)) :
-                if type(to_append) == type({}) :
-                  to_append[obj['expected'][x]] = row[x]
-                else :
-                  to_append.append(row[x])
-              out[obj['name']].append(to_append)
-        except Exception as e :
-          print "failed:", e
+      print "evaluating :::", obj['sql']
+      try :
+        result = CONN.execute(text(obj['sql']))
+        if obj['expected'] != [] :
+          out[obj['name']] = []
+          for row in result.fetchall() :
+            to_append = {} if obj['expected'] else []
+            #print obj['expected'], row
+            for x in range(len(row)) :
+              if type(to_append) == type({}) :
+                to_append[obj['expected'][x]] = row[x]
+              else :
+                to_append.append(row[x])
+            out[obj['name']].append(to_append)
+      except Exception as e :
+        print "failed:", e
     if jobj.has_key('subsequent') :
       out['subsequent'] = jobj['subsequent']
     to_prune = []
