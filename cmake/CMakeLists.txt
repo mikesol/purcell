@@ -3,12 +3,6 @@ include(LibFindMacros.cmake)
 
 project(simple_server)
 
-execute_process(COMMAND "python" "build_simple_webserver.py"
-             WORKING_DIRECTORY "../python/")
-
-add_executable(simple_server ../websocket/simple-server-with-sql.c)
-
-
 # SQLITE
 
 libfind_pkg_check_modules(sqlite3_PKGCONF sqlite3)
@@ -17,6 +11,8 @@ find_path(sqlite3_INCLUDE_DIR
   NAMES sqlite3.h
   PATHS ${sqlite3_PKGCONF_INCLUDE_DIRS}
 )
+
+MESSAGE(STATUS "SQL I D ${sqlite3_INCLUDE_DIR}")
 
 find_library(sqlite3_LIBRARY
   NAMES sqlite3
@@ -68,6 +64,14 @@ find_library(jansson_LIBRARY
 set(jansson_PROCESS_INCLUDES jansson_INCLUDE_DIR)
 set(jansson_PROCESS_LIBS jansson_LIBRARY)
 libfind_process(jansson)
+
+MESSAGE(STATUS "Crunching Python scripts...this may take awhile.")
+
+execute_process(COMMAND "python" "build_simple_webserver.py"
+             WORKING_DIRECTORY "../python/")
+
+add_executable(simple_server ../build/simple-server-with-sql.c)
+
 
 include_directories(${jansson_INCLUDE_DIR})
 set(LIBS ${LIBS} ${jansson_LIBRARY})
