@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+		<title>SQL Engraving</title>
+
+	    <script src="../third_party/jquery/jquery-1.11.1.min.js" type="text/javascript"></script>
+	    <script src="../third_party/spin/spin.js" type="text/javascript"></script>
+	    <script src="../third_party/spin/jquery.spin.js" type="text/javascript"></script>
+	    <script src="../third_party/snap/snap.svg-min.js" type="text/javascript"></script>
+	    <script src="../js/purcell.js" type="text/javascript"></script>
+	    <script src="../js/purcell_websocket.js" type="text/javascript"></script>
+	    <link href="../css/purcell.css" rel="stylesheet" type="text/css"></link>
+		<script type="text/javascript">
+        function processSql(data) {
+             console.log("received", data);
+             console.log("DO", data.information);
+             var stringified = JSON.stringify(data.information,
+             function(key, val) {
+                 if (val == null) {return val; }
+                 return val.toFixed ? Number(val.toFixed(3)) : val;
+                 }, 2);
+             if (stringified != '[]') {
+               $('#sql_result').text(stringified);
+             } else {
+               $('#sql_result').text('');
+             }
+             purcell.draw(data);
+           }
+           function interpret_query() {
+             var out = [{name:"information", sql :
+             $("#sql_input").val()}];
+             purcell.append_standard_graphical_queries(out);
+             out = {
+               client:purcell.MY_NAME,
+               sql:out,
+               'return': purcell._be(purcell.MY_NAME),
+               subsequent:"processSql"
+             };
+             purcell.$0cket.send(JSON.stringify(out));
+           }
+          $(document).ready(function() {
+            purcell.initialize();
+	    // initialize with a staff, a clef and a time signature
+	    var out = [];
+	    out.push({sql:"INSERT INTO dot_padding (id, val)  VALUES (-1,1.0);"});
+	    out.push({sql:"INSERT INTO dynamic_padding (id, val)  VALUES (-1,1.5);"});
+	    out.push({sql:"INSERT INTO rhythmic_event_to_dot_padding (id, val)  VALUES (-1,1.0);"});
+	    out.push({sql:"INSERT INTO rhythmic_event_to_accidental_padding (id, val)  VALUES (-1,0.5);"});
+	    out.push({sql:"INSERT INTO time_signature_inter_number_padding (id, val)  VALUES (-1,0.0);"});
+	    out.push({sql:"INSERT INTO key_signature_inter_accidental_padding (id, val)  VALUES (-1,0.5);"});
+	    out.push({sql:"INSERT INTO name (id, val)  VALUES (0,'time_signature');"});
+	    out.push({sql:"INSERT INTO font_name (id, val)  VALUES (0,'Bravura');"});
+	    out.push({sql:"INSERT INTO font_size (id, val)  VALUES (0,20);"});
+	    out.push({sql:"INSERT INTO time_signature (id, num, den)  VALUES (0,4,4);"});
+	    out.push({sql:"INSERT INTO name (id, val)  VALUES (2,'clef');"});
+	    out.push({sql:"INSERT INTO font_name (id, val)  VALUES (2,'Bravura');"});
+	    out.push({sql:"INSERT INTO font_size (id, val)  VALUES (2,20);"});
+	    out.push({sql:"INSERT INTO unicode (id, val)  VALUES (2,'U+E050');"});
+	    out.push({sql:"INSERT INTO staff_position (id, val)  VALUES (2,-1.0);"});
+	    out.push({sql:"INSERT INTO pitch (id, val)  VALUES (2,4);"});
+	    out.push({sql:"INSERT INTO octave (id, val)  VALUES (2,0);"});
+	    out.push({sql:"INSERT INTO graphical_next (id, prev, next) VALUES (2,NULL,0);"});
+	    out.push({sql:"INSERT INTO graphical_next (id, prev, next) VALUES (0,2,NULL);"});
+	    out.push({sql:"INSERT INTO name (id, val)  VALUES (1,'staff_symbol');"});
+	    out.push({sql:"INSERT INTO line_thickness (id, val)  VALUES (1,0.13);"});
+	    out.push({sql:"INSERT INTO n_lines (id, val)  VALUES (1,5);"});
+	    out.push({sql:"INSERT INTO staff_space (id, val)  VALUES (1,1.0);"});
+	    out.push({sql:"INSERT INTO staff_symbol (id, val)  VALUES (2,1);"});
+	    out.push({sql:"INSERT INTO staff_symbol (id, val)  VALUES (0,1);"});
+	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (2);"});
+	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (0);"});
+	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (1);"});
+            purcell.make_websocket(out);
+        });	         
+	    </script>
+
+	</head>
+
+	<body>
+
+				<div id="webpage">
+			      <div>
+			        <button class="pitch" onclick="purcell.shiftX(null)">&#8635;</button>
+			        <button class="pitch" onclick="purcell.shiftX(90)">&#8606;</button>
+			        <button class="pitch" onclick="purcell.shiftX(30)">&#8592;</button>
+			        <button class="pitch" onclick="purcell.shiftX(-30)">&#8594;</button>
+			        <button class="pitch" onclick="purcell.shiftX(-90)">&#8608;</button>
+			        <button class="pitch" onclick="purcell.shiftX(3.1416)">&#8618;</button>
+			      </div>
+			      <!--<canvas id="engraving" width="1000" height="100">
+			      </canvas>-->
+			      <svg id="engraving" width="100%"></svg>
+			      <div id="spinny">
+			      </div>
+			      <div>
+			        <span class="bordered" id="currentPitch"></span>
+			        <button class="pitch" onclick="purcell.addNoteN(0)">C</button>
+			        <button class="pitch" onclick="purcell.addNoteN(1)">D</button>
+			        <button class="pitch" onclick="purcell.addNoteN(2)">E</button>
+			        <button class="pitch" onclick="purcell.addNoteN(3)">F</button>
+			        <button class="pitch" onclick="purcell.addNoteN(4)">G</button>
+			        <button class="pitch" onclick="purcell.addNoteN(5)">A</button>
+			        <button class="pitch" onclick="purcell.addNoteN(6)">B</button>
+			        <button class="pitch" onclick="purcell.addNoteN(null)">R</button>
+			        <button class="barline" onclick="purcell.addBarLineN()">|</button>
+			      </div>
+			      <hr>
+			      <div>
+			        <span class="duration" class="bordered" id="currentRhythm"></span>
+			        <button class="duration" onclick="purcell.changeDuration(0)">&#xe1d2;</button>
+			        <button class="duration" onclick="purcell.changeDuration(-1)">&#xe1d3;</button>
+			        <button class="duration" onclick="purcell.changeDuration(-2)">&#xe1d5;</button>
+			        <button class="duration" onclick="purcell.changeDuration(-3)">&#xe1d7;</button>
+			        <button class="duration" onclick="purcell.changeDuration(-4)">&#xe1d9;</button>
+			        <button class="duration" onclick="purcell.changeDuration(-5)">&#xe1db;</button>
+			        <button class="duration" onclick="purcell.changeDuration(-6)">&#xe1dd;</button>
+			        <button class="duration" onclick="purcell.changeDuration(-7)">&#xe1df;</button>
+			        <span class="bordered" id="currentAccidental"></span>
+			        <button class="accidental" onclick="purcell.changeAccidental(null)">&nbsp;</button>
+			        <button class="accidental" onclick="purcell.changeAccidental(-1)">&#xe260;</button>
+			        <button class="accidental" onclick="purcell.changeAccidental(0)">&#xe261;</button>
+			        <button class="accidental" onclick="purcell.changeAccidental(1)">&#xe262;</button>
+			      </div>
+			      <hr>
+			    <div>
+	              <span class="bordered" id="currentDynamic"></span>
+	              &nbsp;&nbsp; <button class="dynamic" onclick="purcell.changeDynamic(null)">&nbsp;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('ppp')">&#58666;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('pp')">&#58667;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('p')">&#58656;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('mp')">&#58668;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('mf')">&#58669;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('f')">&#58658;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('ff')">&#58671;</button>
+	              <button class="dynamic" onclick="purcell.changeDynamic('fff')">&#58672;</button>
+	            </div>
+	            <hr>
+			      <div>
+			        <span class="octave" class="bordered" id="currentOctave"></span>
+			        <button class="octave" onclick="purcell.changeOctave(-1)">8vb</button>
+			        <button class="octave" onclick="purcell.changeOctave(1)">8va</button>
+			      </div>
+			      <hr>
+			      <div>
+			        <span class="beam" class="bordered" id="currentBeam"></span>
+			        <button class="beam" onclick="purcell.beamOn()">beam on</button>
+			        <button class="beam" onclick="purcell.beamOff()">beam off</button>
+			      </div>
+			    </div>
+</html>
