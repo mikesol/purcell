@@ -1,0 +1,31 @@
+.pitch {
+  font-size:40px;
+  min-width:60px;
+}
+.octave {
+  font-size:20px;
+}
+.beam {
+  font-size:20px;
+}
+.duration {
+  font-family:Bravura;
+  font-size:20px;
+}
+.accidental {
+  font-family:Bravura;
+  font-size:20px;
+}
+.dynamic {
+  font-family:Bravura;
+  font-size:20px;
+}
+.barline {
+  /*font-family:Bravura;
+  font-size:20px;*/
+  font-size:40px;
+}
+#webpage {
+  width : 1000px;
+  margin : 0 auto;
+}
