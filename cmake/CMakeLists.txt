@@ -12,8 +12,6 @@ find_path(sqlite3_INCLUDE_DIR
   PATHS ${sqlite3_PKGCONF_INCLUDE_DIRS}
 )
 
-MESSAGE(STATUS "SQL I D ${sqlite3_INCLUDE_DIR}")
-
 find_library(sqlite3_LIBRARY
   NAMES sqlite3
   PATHS ${sqlite3_PKGCONF_LIBRARY_DIRS}
@@ -65,15 +63,15 @@ set(jansson_PROCESS_INCLUDES jansson_INCLUDE_DIR)
 set(jansson_PROCESS_LIBS jansson_LIBRARY)
 libfind_process(jansson)
 
-MESSAGE(STATUS "Crunching Python scripts...this may take awhile.")
+MESSAGE(STATUS "Building header files.")
 
-execute_process(COMMAND "python" "build_simple_webserver.py"
-             WORKING_DIRECTORY "../python/")
+execute_process(COMMAND "xxd" "-i" "raw_sql" "raw_sql.h"
+                WORKING_DIRECTORY "../build")
 
-add_executable(simple_server ../build/simple-server-with-sql.c)
-
+add_executable(simple_server ../websocket/simple-server.c)
 
 include_directories(${jansson_INCLUDE_DIR})
+include_directories(../build/)
 set(LIBS ${LIBS} ${jansson_LIBRARY})
 
 target_link_libraries(simple_server ${LIBS})

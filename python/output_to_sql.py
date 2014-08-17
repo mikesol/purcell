@@ -518,3 +518,12 @@ def output_to_sql() :
   OUT += bravura_tools.populate_glyph_box_table(None, None)
 
   return OUT
+
+if __name__ == '__main__' :
+  import os
+  if not os.path.isdir('../build') :
+    os.mkdir('../build')
+  SQL = output_to_sql()
+  file = file('../build/raw_sql','w')
+  file.write(SQL)
+  file.close()

@@ -13,7 +13,7 @@
 		<script type="text/javascript">
         function processSql(data) {
              console.log("received", data);
-             console.log("DO", data.information);
+             //console.log("DO", data.information);
              var stringified = JSON.stringify(data.information,
              function(key, val) {
                  if (val == null) {return val; }
@@ -39,6 +39,7 @@
              purcell.$0cket.send(JSON.stringify(out));
            }
           $(document).ready(function() {
+            $('#spinny').spin();
             purcell.initialize();
 	    // initialize with a staff, a clef and a time signature
 	    var out = [];
@@ -73,13 +74,31 @@
             purcell.make_websocket(out);
         });	         
 	    </script>
-
+<style type="text/css">
+  .purcell_content {
+    display : table;
+    margin : auto;
+  }
+  span.text-span {
+    font-size : 40px;
+    font-family : Sans-Serif;
+  }
+body {
+  background: #f7f2d3;
+  background: -moz-radial-gradient(center, circle cover, white 0%, #f7f2d3 100%);
+  background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%, white), color-stop(100%, #f7f2d3));
+  background: -webkit-radial-gradient(center, circle cover, white 0%, #f7f2d3 100%);
+  background: -o-radial-gradient(center, circle cover, white 0%, #f7f2d3 100%);
+  background: -ms-radial-gradient(center, circle cover, white 0%, #f7f2d3 100%);
+  background: radial-gradient(center, circle cover, white 0%, #f7f2d3 100%);
+  background-color: #f7f3de; }
+</style>
 	</head>
 
 	<body>
 
 				<div id="webpage">
-			      <div>
+			      <div class="purcell_content">
 			        <button class="pitch" onclick="purcell.shiftX(null)">&#8635;</button>
 			        <button class="pitch" onclick="purcell.shiftX(90)">&#8606;</button>
 			        <button class="pitch" onclick="purcell.shiftX(30)">&#8592;</button>
@@ -92,8 +111,8 @@
 			      <svg id="engraving" width="100%"></svg>
 			      <div id="spinny">
 			      </div>
-			      <div>
-			        <span class="bordered" id="currentPitch"></span>
+			      <div class="purcell_content">
+			        <span class="text-span" id="currentPitch"></span>
 			        <button class="pitch" onclick="purcell.addNoteN(0)">C</button>
 			        <button class="pitch" onclick="purcell.addNoteN(1)">D</button>
 			        <button class="pitch" onclick="purcell.addNoteN(2)">E</button>
@@ -105,8 +124,9 @@
 			        <button class="barline" onclick="purcell.addBarLineN()">|</button>
 			      </div>
 			      <hr>
-			      <div>
-			        <span class="duration" class="bordered" id="currentRhythm"></span>
+			      <div class="purcell_content">
+			        <span class="duration" class="bordered"
+			        style="font-size:30px" id="currentRhythm"></span>
 			        <button class="duration" onclick="purcell.changeDuration(0)">&#xe1d2;</button>
 			        <button class="duration" onclick="purcell.changeDuration(-1)">&#xe1d3;</button>
 			        <button class="duration" onclick="purcell.changeDuration(-2)">&#xe1d5;</button>
@@ -115,16 +135,19 @@
 			        <button class="duration" onclick="purcell.changeDuration(-5)">&#xe1db;</button>
 			        <button class="duration" onclick="purcell.changeDuration(-6)">&#xe1dd;</button>
 			        <button class="duration" onclick="purcell.changeDuration(-7)">&#xe1df;</button>
-			        <span class="bordered" id="currentAccidental"></span>
+			        &nbsp;
+			        <span style="font-size:30px"  class="bordered" id="currentAccidental"></span>
+			        &nbsp;
 			        <button class="accidental" onclick="purcell.changeAccidental(null)">&nbsp;</button>
 			        <button class="accidental" onclick="purcell.changeAccidental(-1)">&#xe260;</button>
 			        <button class="accidental" onclick="purcell.changeAccidental(0)">&#xe261;</button>
 			        <button class="accidental" onclick="purcell.changeAccidental(1)">&#xe262;</button>
 			      </div>
 			      <hr>
-			    <div>
-	              <span class="bordered" id="currentDynamic"></span>
-	              &nbsp;&nbsp; <button class="dynamic" onclick="purcell.changeDynamic(null)">&nbsp;</button>
+			    <div class="purcell_content">
+			    &nbsp;
+	              <span class="bordered" style="font-size:30px"  style="width:80px;" id="currentDynamic"></span>
+	              &nbsp;&nbsp; &nbsp; <button class="dynamic" onclick="purcell.changeDynamic(null)">&nbsp;</button>
 	              <button class="dynamic" onclick="purcell.changeDynamic('ppp')">&#58666;</button>
 	              <button class="dynamic" onclick="purcell.changeDynamic('pp')">&#58667;</button>
 	              <button class="dynamic" onclick="purcell.changeDynamic('p')">&#58656;</button>
@@ -135,16 +158,22 @@
 	              <button class="dynamic" onclick="purcell.changeDynamic('fff')">&#58672;</button>
 	            </div>
 	            <hr>
-			      <div>
-			        <span class="octave" class="bordered" id="currentOctave"></span>
+			      <div class="purcell_content">
+			        <span class="text-span" style="font-size:20px;" id="currentOctave"></span>
 			        <button class="octave" onclick="purcell.changeOctave(-1)">8vb</button>
 			        <button class="octave" onclick="purcell.changeOctave(1)">8va</button>
 			      </div>
 			      <hr>
-			      <div>
-			        <span class="beam" class="bordered" id="currentBeam"></span>
+			      <div class="purcell_content">
+			        <span class="text-span" style="font-size:20px;" id="currentBeam"></span>
 			        <button class="beam" onclick="purcell.beamOn()">beam on</button>
 			        <button class="beam" onclick="purcell.beamOff()">beam off</button>
 			      </div>
 			    </div>
+				<div id="sql_result"></div>
+				<textarea id="sql_input" style="font-size:20px;width:100%"
+				rows="10"
+				></textarea><div style="display:table;margin:auto">
+                                <button class="pitch"
+				onclick="interpret_query()">evaluate</button>
 </html>

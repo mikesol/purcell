@@ -5,7 +5,15 @@
 #include <sqlite3.h>
 #include <jansson.h>
 
+#include "raw_sql.h"
+
+typedef enum { false, true } bool;
+
 static sqlite3 *db;
+
+static int sql_length = 0;
+static char * sql_success = NULL;
+static bool score_initialized = false;
 
 static int callback_sql(void *result_json_arr_v, int argc, char **argv, char **azColName)
 {
@@ -26,7 +34,7 @@ static int callback_vanilla(void *NotUsed, int argc, char **argv, char **azColNa
     return 0;
 }
 
-static int callback_http(struct libwebsocket_context * this,
+static int callback_http(struct libwebsocket_context * context,
                          struct libwebsocket *wsi,
                          enum libwebsocket_callback_reasons reason, void *user,
                          void *in, size_t len)
@@ -34,7 +42,7 @@ static int callback_http(struct libwebsocket_context * this,
     return 0;
 }
 
-static int callback_vanilla_increment(struct libwebsocket_context * this,
+static int callback_purcell(struct libwebsocket_context * context,
                                       struct libwebsocket *wsi,
                                       enum libwebsocket_callback_reasons reason,
                                       void *user, void *in, size_t len)
@@ -44,6 +52,24 @@ static int callback_vanilla_increment(struct libwebsocket_context * this,
     case LWS_CALLBACK_ESTABLISHED:
     {
         printf("connection established\n");
+        break;
+    }
+    case LWS_CALLBACK_SERVER_WRITEABLE:
+    {
+        unsigned char *buf = (unsigned char*) malloc(LWS_SEND_BUFFER_PRE_PADDING + sql_length + 1 +
+                             LWS_SEND_BUFFER_POST_PADDING);
+
+        int i=0;
+
+        for (i=0; i < sql_length + 1; i++)
+        {
+            buf[LWS_SEND_BUFFER_PRE_PADDING + i] = sql_success[i];
+        }
+
+        libwebsocket_write(wsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], sql_length, LWS_WRITE_TEXT);
+
+        // release memory back into the wild
+        free(buf);
         break;
     }
     case LWS_CALLBACK_RECEIVE:
@@ -56,60 +82,76 @@ static int callback_vanilla_increment(struct libwebsocket_context * this,
         json_error_t json_error;
         json_t *request_root = json_loads( in_json, 0, &json_error );
         json_t *response_root = json_object();
+        bool initializing = false;
+        bool just_me = true;
 
         if( request_root )
         {
-
-            json_t *jsonArr = json_object_get( request_root, "sql" );
-            if (json_is_array( jsonArr ))
+            json_t *jsonReturn = json_object_get( request_root, "return" );
+            if (json_is_string( jsonReturn ))
             {
-                const unsigned int length = json_array_size( jsonArr );
-                unsigned int idx = 0;
-                for (idx = 0; idx < length; idx++)
-                {
-                    char *sql_request = NULL;
-                    char *request_name = NULL;
-                    json_t *jsonObject = json_array_get( jsonArr, idx );
-                    json_t *sql_json_arr = json_array();
-                    json_t *jsonData = json_object_get( jsonObject, "sql" );
-                    char *zErrMsg = 0;
-                    if( json_is_string( jsonData ) )
-                    {
-                        const char *sql_from_json = json_string_value( jsonData );
-                        sql_request = malloc(strlen(sql_from_json) + 1);
-                        strcpy(sql_request, sql_from_json);
-                    }
-                    //////////////////
-                    jsonData = json_object_get( jsonObject, "name" );
-                    if( json_is_string( jsonData ) )
-                    {
-                        const char *sql_from_json = json_string_value( jsonData );
-                        request_name = malloc(strlen(sql_from_json) + 1);
-                        strcpy(request_name, sql_from_json);
-                    }
-                    printf("EXECUTING: %s\n", sql_request);
-                    rc = sqlite3_exec(db, sql_request, callback_sql, sql_json_arr, &zErrMsg);
-                    if( rc!=SQLITE_OK )
-                    {
-                        fprintf(stderr, "SQL error: %s\n", zErrMsg);
-                        sqlite3_free(zErrMsg);
-                    }
-                    else
-                    {
-                        printf("SQL success!\n");
-                    }
-
-                    json_object_set_new( response_root, request_name ? request_name : "anonymous", sql_json_arr );
-                    free(sql_request);
-                    free(request_name);
-                }
+                const char *perhaps_unnecessary = json_string_value( jsonReturn );
+                just_me = strcmp(perhaps_unnecessary, "everyone") != 0;
             }
-            json_t *jsonSubsequent = json_object_get( request_root, "subsequent" );
-            if (json_is_string( jsonSubsequent ))
+            json_t *jsonInitializing = json_object_get( request_root, "initializing" );
+            if (json_is_boolean( jsonInitializing ))
             {
-                // hmmm...overkill?
-                const char *perhaps_unnecessary = json_string_value( jsonSubsequent );
-                json_object_set_new( response_root, "subsequent", json_string( perhaps_unnecessary ) );
+                initializing = json_boolean_value ( jsonInitializing );
+            }
+            if (( !initializing ) | (initializing && !score_initialized))
+            {
+                score_initialized = true;
+                json_t *jsonArr = json_object_get( request_root, "sql" );
+                if (json_is_array( jsonArr ))
+                {
+                    const unsigned int length = json_array_size( jsonArr );
+                    unsigned int idx = 0;
+                    for (idx = 0; idx < length; idx++)
+                    {
+                        char *sql_request = NULL;
+                        char *request_name = NULL;
+                        json_t *jsonObject = json_array_get( jsonArr, idx );
+                        json_t *sql_json_arr = json_array();
+                        json_t *jsonData = json_object_get( jsonObject, "sql" );
+                        char *zErrMsg = 0;
+                        if( json_is_string( jsonData ) )
+                        {
+                            const char *sql_from_json = json_string_value( jsonData );
+                            sql_request = malloc(strlen(sql_from_json) + 1);
+                            strcpy(sql_request, sql_from_json);
+                        }
+                        //////////////////
+                        jsonData = json_object_get( jsonObject, "name" );
+                        if( json_is_string( jsonData ) )
+                        {
+                            const char *sql_from_json = json_string_value( jsonData );
+                            request_name = malloc(strlen(sql_from_json) + 1);
+                            strcpy(request_name, sql_from_json);
+                        }
+                        //printf("EXECUTING: %s\n", sql_request);
+                        rc = sqlite3_exec(db, sql_request, callback_sql, sql_json_arr, &zErrMsg);
+                        if( rc!=SQLITE_OK )
+                        {
+                            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+                            sqlite3_free(zErrMsg);
+                        }
+                        else
+                        {
+                            //printf("SQL success!\n");
+                        }
+
+                        json_object_set_new( response_root, request_name ? request_name : "anonymous", sql_json_arr );
+                        free(sql_request);
+                        free(request_name);
+                    }
+                }
+                json_t *jsonSubsequent = json_object_get( request_root, "subsequent" );
+                if (json_is_string( jsonSubsequent ))
+                {
+                    // hmmm...overkill?
+                    const char *perhaps_unnecessary = json_string_value( jsonSubsequent );
+                    json_object_set_new( response_root, "subsequent", json_string( perhaps_unnecessary ) );
+                }
             }
             // free json!
             json_decref( request_root );
@@ -123,27 +165,23 @@ static int callback_vanilla_increment(struct libwebsocket_context * this,
             printf("JSON ERR POS %d\n", json_error.position);
         }
 
-        char *sql_success = NULL;
+        if (sql_success) {
+          free(sql_success);
+        }
         sql_success = json_dumps( response_root, 0 );
         json_decref( response_root );
-        int len = strlen(sql_success);
+        sql_length = strlen(sql_success);
 
-        unsigned char *buf = (unsigned char*) malloc(LWS_SEND_BUFFER_PRE_PADDING + len + 1 +
-                             LWS_SEND_BUFFER_POST_PADDING);
-
-        int i=0;
-
-        for (i=0; i < len + 1; i++)
-        {
-            buf[LWS_SEND_BUFFER_PRE_PADDING + i] = sql_success[i];
-        }
-
-        libwebsocket_write(wsi, &buf[LWS_SEND_BUFFER_PRE_PADDING], len, LWS_WRITE_TEXT);
-
-        // release memory back into the wild
-        free(buf);
-        free(sql_success);
         free(in_json);
+        if (just_me)
+        {
+           libwebsocket_callback_on_writable(context, wsi);
+        }
+        else
+        {
+           libwebsocket_callback_on_writable_all_protocol(
+                      libwebsockets_get_protocol(wsi));
+        }
         break;
     }
     default:
@@ -164,8 +202,8 @@ static struct libwebsocket_protocols protocols[] =
         0
     },
     {
-        "dumb-increment-protocol", // protocol name - very important!
-        callback_vanilla_increment,   // callback
+        "purcell-engraving-protocol", // protocol name - very important!
+        callback_purcell,   // callback
         0,                          // we don't use any per session data
         0
 
@@ -216,12 +254,18 @@ int main(void)
         sqlite3_close(db);
         return(1);
     }
-    rc = sqlite3_exec(db, "REPLACE_ME_WITH_VALID_SQL", callback_vanilla, 0, &zErrMsg);
+
+    char *full_sql_program = NULL;
+    full_sql_program = malloc(raw_sql_len + 1);
+    memcpy(full_sql_program, raw_sql, raw_sql_len);
+    full_sql_program[raw_sql_len] = '\0';
+    rc = sqlite3_exec(db, full_sql_program, callback_vanilla, 0, &zErrMsg);
     if( rc!=SQLITE_OK )
     {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
     }
+    free(full_sql_program);
 
     context = libwebsocket_create_context(&info);
     if (context == NULL)

@@ -28,7 +28,7 @@ purcell.shiftX = function(v) {
   purcell.GLOBAL_X_SHIFT = Math.min(30, purcell.GLOBAL_X_SHIFT);
   out = []
   purcell.append_standard_graphical_queries(out);
-  out = {client:purcell.MY_NAME, sql:out, 'return': purcell._be(purcell.MY_NAME), subsequent:"purcell.draw"};
+  out = {client:purcell.MY_NAME, sql:out, 'return': 'just_me', subsequent:"purcell.draw"};
   purcell.$0cket.send(JSON.stringify(out));
 }
 purcell.updateCurrentPitch = function() {
@@ -153,7 +153,7 @@ purcell.beamOn = function() {
       sql : purcell.get_last_used_item()
     });
   }
-  out = {client:purcell.MY_NAME, sql:out, 'return': purcell._be(purcell.MY_NAME), subsequent:"purcell.registerBeam"};
+  out = {client:purcell.MY_NAME, sql:out, 'return': 'just_me', subsequent:"purcell.registerBeam"};
   purcell.$0cket.send(JSON.stringify(out));
 }
 purcell.registerBeam = function(data) {
@@ -251,7 +251,7 @@ purcell.increment_and_execute = function(subsequent, out) {
     sql : "SELECT graphical_next.prev AS id FROM graphical_next WHERE graphical_next.next IS NULL;"
   });
   console.log("AAHHHHHH", out);
-  out = {client:purcell.MY_NAME, sql:out, 'return': purcell._be(purcell.MY_NAME), subsequent: subsequent};
+  out = {client:purcell.MY_NAME, sql:out, 'return': 'just_me', subsequent: subsequent};
   purcell.$0cket.send(JSON.stringify(out));
 }
 
@@ -331,7 +331,7 @@ purcell.addNote_2 = function(data) {
     out = purcell.add_dynamic(data.dynamic_id[0]['id'], next, out);
   }
   purcell.append_standard_graphical_queries(out);
-  out = {client:purcell.MY_NAME, sql:out, 'return': "*", subsequent: "purcell.draw"};
+  out = {client:purcell.MY_NAME, sql:out, 'return': "everyone", subsequent: "purcell.draw"};
   ///////////////////////////
   purcell.$0cket.send(JSON.stringify(out));
 }
@@ -376,7 +376,7 @@ purcell.add_dynamic = function(dynamic_id, note_id, out) {
   return out;
 }
 purcell.addBarLine = function(data) {
-  console.log("data going to adBarLine", data);
+  console.log("data going to addBarLine", data);
   out = [];
   var prev = data['prev'][0]['id'];
   var prev_prev = data['prev_prev'][0]['id'];
@@ -408,7 +408,7 @@ purcell.addBarLine = function(data) {
     sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+next+","+prev+",NULL);"
   });
   purcell.append_standard_graphical_queries(out);
-  out = {client:purcell.MY_NAME, sql:out, 'return': "*", subsequent: "purcell.draw"};
+  out = {client:purcell.MY_NAME, sql:out, 'return': "everyone", subsequent: "purcell.draw"};
   ///////////////////////////
   purcell.$0cket.send(JSON.stringify(out));
 }
