@@ -35,4 +35,5 @@ And an application called simple_server will be built in the `cmake` directory.
 
 Run this application and a server will serve until you kill it.
 While it's running, open the page at html/index.html in a modern browser.
-Open it several times to multiply the fun!
+Click on note names to make them appear.
+Open it several times to edit the score from several windows.
