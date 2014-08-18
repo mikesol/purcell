@@ -20,7 +20,6 @@ find_library(sqlite3_LIBRARY
 set(sqlite3_PROCESS_INCLUDES sqlite3_INCLUDE_DIR)
 set(sqlite3_PROCESS_LIBS sqlite3_LIBRARY)
 libfind_process(sqlite3)
-
 include_directories(${sqlite3_INCLUDE_DIR})
 set(LIBS ${LIBS} ${sqlite3_LIBRARY})
 
@@ -41,7 +40,6 @@ find_library(libwebsockets_LIBRARY
 set(libwebsockets_PROCESS_INCLUDES libwebsockets_INCLUDE_DIR)
 set(libwebsockets_PROCESS_LIBS libwebsockets_LIBRARY)
 libfind_process(libwebsockets)
-
 include_directories(${libwebsockets_INCLUDE_DIR})
 set(LIBS ${LIBS} ${libwebsockets_LIBRARY})
 
@@ -62,6 +60,8 @@ find_library(jansson_LIBRARY
 set(jansson_PROCESS_INCLUDES jansson_INCLUDE_DIR)
 set(jansson_PROCESS_LIBS jansson_LIBRARY)
 libfind_process(jansson)
+include_directories(${jansson_INCLUDE_DIR})
+set(LIBS ${LIBS} ${jansson_LIBRARY})
 
 MESSAGE(STATUS "Building header files.")
 
@@ -70,8 +70,6 @@ execute_process(COMMAND "xxd" "-i" "raw_sql" "raw_sql.h"
 
 add_executable(simple_server ../websocket/simple-server.c)
 
-include_directories(${jansson_INCLUDE_DIR})
 include_directories(../build/)
-set(LIBS ${LIBS} ${jansson_LIBRARY})
 
 target_link_libraries(simple_server ${LIBS})

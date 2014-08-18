@@ -115,12 +115,12 @@ purcell.addNoteN = function(v) {
   if (purcell.GLOBAL_DYNAMIC != null) {
     out = purcell.dynamic_increment(out);
   }
-  purcell.increment_and_execute("purcell.addNote_2",out);
   $('#spinny').spin(); // Creates a default Spinner using the text color
+  purcell.increment_and_execute("purcell.addNote_2",out);
 }
 purcell.addBarLineN = function() {
-  purcell.increment_and_execute("purcell.addBarLine");
   $('#spinny').spin(); // Creates a default Spinner using the text color
+  purcell.increment_and_execute("purcell.addBarLine");
 }
 purcell.changeDuration = function(v) {
   purcell.GLOBAL_DURATION = v;
@@ -478,79 +478,85 @@ purcell.draw = function(data) {
   purcell.MAX_X = data.max_x[0]['x'];
   purcell.$nap.clear();
   _gr0up = purcell.$nap.group().attr({transform:'scale(2,2);'});
-  for (var i = 0; i < data.line_stencil.length; i++) {
-    var line = data.line_stencil[i];
-    console.log("making line", line);
-    var x = parseFloat(!purcell.is_null(line['x_position']) ? line['x_position'] : 0.0);
-    var y = parseFloat(!purcell.is_null(line['y_position']) ? line['y_position'] : 0.0);
-    var name = line['name'] ? line['name'] : '';
-    var s_line = _gr0up.line(purcell.st_x(parseFloat(line['x0']) + x),
-                             purcell.st_y(parseFloat(line['y0']) + y),
-                             purcell.st_x(parseFloat(line['x1']) + x),
-                             purcell.st_y(parseFloat(line['y1']) + y)).attr({
-       stroke : 'black',
-       strokeWidth : purcell.s_(parseFloat(line['thickness'])),
-       'id' : name+'_line_'+line['id']+'_'+line['sub_id'],
-    });
-    s_line.click(function() { return function() { purcell.registerAsClicked(s_line) } });
-  }        
-  for (var i = 0; i < data.glyph_stencil.length; i++) {
-    var closure = function () {
-      var glyph = data.glyph_stencil[i];
-      console.log("making glyph", glyph);
-      var x = parseFloat(glyph['x']) + parseFloat(!purcell.is_null(glyph['x_position']) ? glyph['x_position'] : 0.0);
-      var y = parseFloat(glyph['y']) + parseFloat(!purcell.is_null(glyph['y_position']) ? glyph['y_position'] : 0.0);
-      uc = String.fromCharCode(parseInt(glyph['unicode'].substr(2), 16));
-      var name = glyph['name'] ? glyph['name'] : '';
-      //console.log(context.font, glyph[3], uc);
-      var s_glyph = _gr0up.text(purcell.st_x(x), purcell.st_y(y), uc).attr({
-        "font-family" : glyph['font_name'],
-        "font-size" : glyph['font_size'],
-         'id' : name+'_glyph_'+glyph['id']+'_'+glyph['sub_id'],
+  if (data.line_stencil != null) {
+    for (var i = 0; i < data.line_stencil.length; i++) {
+      var line = data.line_stencil[i];
+      console.log("making line", line);
+      var x = parseFloat(!purcell.is_null(line['x_position']) ? line['x_position'] : 0.0);
+      var y = parseFloat(!purcell.is_null(line['y_position']) ? line['y_position'] : 0.0);
+      var name = line['name'] ? line['name'] : '';
+      var s_line = _gr0up.line(purcell.st_x(parseFloat(line['x0']) + x),
+                               purcell.st_y(parseFloat(line['y0']) + y),
+                               purcell.st_x(parseFloat(line['x1']) + x),
+                               purcell.st_y(parseFloat(line['y1']) + y)).attr({
+         stroke : 'black',
+         strokeWidth : purcell.s_(parseFloat(line['thickness'])),
+         'id' : name+'_line_'+line['id']+'_'+line['sub_id'],
       });
-      s_glyph.click(function() { purcell.registerAsClicked(s_glyph.attr('id'))  } );
-    };
-    closure();
+      s_line.click(function() { return function() { purcell.registerAsClicked(s_line) } });
+    }
+  }
+  if (data.glyph_stencil != null) {
+    for (var i = 0; i < data.glyph_stencil.length; i++) {
+      var closure = function () {
+        var glyph = data.glyph_stencil[i];
+        console.log("making glyph", glyph);
+        var x = parseFloat(glyph['x']) + parseFloat(!purcell.is_null(glyph['x_position']) ? glyph['x_position'] : 0.0);
+        var y = parseFloat(glyph['y']) + parseFloat(!purcell.is_null(glyph['y_position']) ? glyph['y_position'] : 0.0);
+        uc = String.fromCharCode(parseInt(glyph['unicode'].substr(2), 16));
+        var name = glyph['name'] ? glyph['name'] : '';
+        //console.log(context.font, glyph[3], uc);
+        var s_glyph = _gr0up.text(purcell.st_x(x), purcell.st_y(y), uc).attr({
+          "font-family" : glyph['font_name'],
+          "font-size" : glyph['font_size'],
+           'id' : name+'_glyph_'+glyph['id']+'_'+glyph['sub_id'],
+        });
+        s_glyph.click(function() { purcell.registerAsClicked(s_glyph.attr('id'))  } );
+      };
+      closure();
+    }
   }
   var polygon_holder = {};
-  for (var i = 0; i < data.polygon_stencil.length; i++) {
-    var polygon = data.polygon_stencil[i];
-    console.log("PG",polygon);
-    if (!polygon_holder[polygon['id']]) {
-      polygon_holder[polygon['id']] = {};
-    }
-    if (!polygon_holder[polygon['id']][polygon['sub_id']]) {
-      console.log("making sub", polygon['sub_id']);
-      polygon_holder[polygon['id']][polygon['sub_id']] = [];
-    }
-    polygon_holder[polygon['id']][polygon['sub_id']].push(polygon);
-  }
-  console.log("PH", polygon_holder);
-  for (key in polygon_holder) {
-    for (sub_key in polygon_holder[key]) {
-      // first, we sort in point order
-      console.log("before sorting", polygon_holder[key][sub_key])
-      polygon_holder[key][sub_key].sort(function(a,b)
-        {
-          return parseInt(a['point']) - parseInt(b['point']);
-        });
-      console.log("after sorting", polygon_holder[key][sub_key])
-      // then, iterate
-      var path = "";
-      for (var i = 0; i < polygon_holder[key][sub_key].length; i++) {
-        path = path + ((i == 0 ? 'M' : 'L') + " " + purcell.st_x(parseFloat(polygon_holder[key][sub_key][i].x)) + " " + purcell.st_y(parseFloat(polygon_holder[key][sub_key][i].y))+ " ");
+  if (data.polygon_stencil != null) {
+    for (var i = 0; i < data.polygon_stencil.length; i++) {
+      var polygon = data.polygon_stencil[i];
+      console.log("PG",polygon);
+      if (!polygon_holder[polygon['id']]) {
+        polygon_holder[polygon['id']] = {};
       }
-      var name = polygon_holder[key][sub_key][0]['name'] ? polygon_holder[key][sub_key][0]['name'] : '';
-      var thick = parseFloat(polygon_holder[key][sub_key][0].thickness ? polygon_holder[key][sub_key][0].thickness : 0.0); 
-      var s_polygon = _gr0up.path(path).attr({
-        fill : polygon_holder[key][sub_key][0].fill == 1 ? true : false,
-        stroke : 'black',
-        strokeWidth : parseFloat(polygon_holder[key][sub_key][0].stroke) * thick,
-       'id' : name+'_polygon_'+polygon['id']+'_'+polygon['sub_id'],
-      }).click(purcell.registerAsClicked);
-      s_polygon.click(function() { return function() { purcell.registerAsClicked(s_polygon) } });
+      if (!polygon_holder[polygon['id']][polygon['sub_id']]) {
+        console.log("making sub", polygon['sub_id']);
+        polygon_holder[polygon['id']][polygon['sub_id']] = [];
+      }
+      polygon_holder[polygon['id']][polygon['sub_id']].push(polygon);
     }
-    
+    console.log("PH", polygon_holder);
+    for (key in polygon_holder) {
+      for (sub_key in polygon_holder[key]) {
+        // first, we sort in point order
+        console.log("before sorting", polygon_holder[key][sub_key])
+        polygon_holder[key][sub_key].sort(function(a,b)
+          {
+            return parseInt(a['point']) - parseInt(b['point']);
+          });
+        console.log("after sorting", polygon_holder[key][sub_key])
+        // then, iterate
+        var path = "";
+        for (var i = 0; i < polygon_holder[key][sub_key].length; i++) {
+          path = path + ((i == 0 ? 'M' : 'L') + " " + purcell.st_x(parseFloat(polygon_holder[key][sub_key][i].x)) + " " + purcell.st_y(parseFloat(polygon_holder[key][sub_key][i].y))+ " ");
+        }
+        var name = polygon_holder[key][sub_key][0]['name'] ? polygon_holder[key][sub_key][0]['name'] : '';
+        var thick = parseFloat(polygon_holder[key][sub_key][0].thickness ? polygon_holder[key][sub_key][0].thickness : 0.0); 
+        var s_polygon = _gr0up.path(path).attr({
+          fill : polygon_holder[key][sub_key][0].fill == 1 ? true : false,
+          stroke : 'black',
+          strokeWidth : parseFloat(polygon_holder[key][sub_key][0].stroke) * thick,
+         'id' : name+'_polygon_'+polygon['id']+'_'+polygon['sub_id'],
+        }).click(purcell.registerAsClicked);
+        s_polygon.click(function() { return function() { purcell.registerAsClicked(s_polygon) } });
+      }
+      
+    }
   }
   console.log("CSO", purcell.CURRENT_SELECTED_OBJECT);
     if (purcell.CURRENT_SELECTED_OBJECT) {

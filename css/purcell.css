@@ -1,3 +1,8 @@
+@font-face {
+  font-family: 'Bravura';
+  src: url('../fonts/Bravura.woff') format('woff'), /* Modern Browsers */
+       url('../Bravura.svg#Bravura') format('svg'); /* Legacy iOS */
+}
 .pitch {
   font-size:40px;
   min-width:60px;
