@@ -1,5 +1,3 @@
-import freetype
-from freetype.ft_errors import FT_Exception
 import sys
 import xml.dom.minidom as minidom
 import json
