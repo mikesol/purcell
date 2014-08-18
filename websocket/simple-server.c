@@ -7,13 +7,11 @@
 
 #include "raw_sql.h"
 
-typedef enum { false, true } bool;
-
 static sqlite3 *db;
 
 static int sql_length = 0;
 static char * sql_success = NULL;
-static bool score_initialized = false;
+static int score_initialized = 0;
 
 static int callback_sql(void *result_json_arr_v, int argc, char **argv, char **azColName)
 {
@@ -82,8 +80,8 @@ static int callback_purcell(struct libwebsocket_context * context,
         json_error_t json_error;
         json_t *request_root = json_loads( in_json, 0, &json_error );
         json_t *response_root = json_object();
-        bool initializing = false;
-        bool just_me = true;
+        int initializing = 0;
+        int just_me = 1;
 
         if( request_root )
         {
@@ -96,11 +94,11 @@ static int callback_purcell(struct libwebsocket_context * context,
             json_t *jsonInitializing = json_object_get( request_root, "initializing" );
             if (json_is_boolean( jsonInitializing ))
             {
-                initializing = json_boolean_value ( jsonInitializing );
+                initializing = json_integer_value ( jsonInitializing );
             }
-            if (( !initializing ) | (initializing && !score_initialized))
+            if (( initializing == 0 ) | ((initializing == 1) && (score_initialized == 0)))
             {
-                score_initialized = true;
+                score_initialized = 1;
                 json_t *jsonArr = json_object_get( request_root, "sql" );
                 if (json_is_array( jsonArr ))
                 {
