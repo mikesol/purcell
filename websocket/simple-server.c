@@ -272,9 +272,6 @@ int main(void)
         return -1;
     }
 
-    libwebsocket_callback_all_protocol(&protocols[1], LWS_CALLBACK_RECEIVE);
-    libwebsocket_callback_all_protocol(&protocols[1], LWS_CALLBACK_SERVER_WRITEABLE);
-
     printf("starting server...\n");
 
     // infinite loop, to end this server send SIGTERM. (CTRL+C)

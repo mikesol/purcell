@@ -510,6 +510,8 @@ def output_to_sql() :
   for table in Score.metadata.sorted_tables :
     OUT += str(CreateTable(table))
     OUT += ";"
+    if 'id' in [col.name for col in table.columns] :
+      OUT += 'CREATE INDEX ix_{0}_id ON {0} (id);\n'.format(table.name)
 
   for ddl in manager.ddls :
     holder = ddl.as_ddl(False)

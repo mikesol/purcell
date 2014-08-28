@@ -51,33 +51,33 @@ def make_table(name, tp, unique = False) :
     # unique not possible
     return make_table_generic(name,
                      [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
-                     Column('num', Integer, index=_GLOBAL_INDEX),
-                     Column('den', Integer, index=_GLOBAL_INDEX)])
+                     Column('num', Integer),
+                     Column('den', Integer)])
   if tp == Spanner :
     # unique not possible
     return make_table_generic(name,
                      [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
-                     Column('left', Float, index=_GLOBAL_INDEX),
-                     Column('right', Float, index=_GLOBAL_INDEX)])
+                     Column('left', Float),
+                     Column('right', Float)])
   if tp == Box :
     # unique not possible
     return make_table_generic(name,
                      [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
-                     Column('x', Float, index=_GLOBAL_INDEX),
-                     Column('y', Float, index=_GLOBAL_INDEX),
-                     Column('width', Float, index=_GLOBAL_INDEX),
-                     Column('height', Float, index=_GLOBAL_INDEX),
+                     Column('x', Float),
+                     Column('y', Float),
+                     Column('width', Float),
+                     Column('height', Float),
                      ])
   if tp == Point :
     # unique not possible
     return make_table_generic(name,
                      [Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
-                     Column('x', Float, index=_GLOBAL_INDEX),
-                     Column('y', Float, index=_GLOBAL_INDEX),
+                     Column('x', Float),
+                     Column('y', Float),
                      ])
   return Table(name, _metadata,
                      Column('id', Integer, primary_key = True, index=_GLOBAL_INDEX),
-                     Column('val', tp, unique = unique, index=_GLOBAL_INDEX))
+                     Column('val', tp, unique = unique))
 
 ##### tables
 
@@ -516,7 +516,7 @@ class DDL_manager(object) :
     for ddl in to_remove :
       self.ddls.remove(ddl)
     '''
-    """
+    #"""
     out = 'digraph G{\n'
     for edge in edges :
       out += '  "{0}" -> "{1}";\n'.format(str(mapping[edge[0]]), str(mapping[edge[1]]))
@@ -524,7 +524,7 @@ class DDL_manager(object) :
     FW = file(filename, 'w')
     FW.write(out)
     FW.close()
-    """
+    #"""
 
 def realize(to_realize, comp_t, prop) :
   #out = select([v.label(k) for k,v in to_realize.c.items()]).\
