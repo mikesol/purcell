@@ -1,5 +1,5 @@
 purcell.make_websocket = function(out) {
-  purcell.$0cket = new WebSocket("ws://localhost:9000", 'purcell-engraving-protocol');
+  purcell.$0cket = new WebSocket("ws://guido.grame.fr:9000", 'purcell-engraving-protocol');
   purcell.$0cket.onopen = function() {
     out = {
            client:purcell.MY_NAME,
