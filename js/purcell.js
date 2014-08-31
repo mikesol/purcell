@@ -125,6 +125,7 @@ purcell.make_session = function(session_name, ids) {
 
   purcell.$e$$ion$[session_name].$0cket = null;
   purcell.$e$$ion$[session_name].$urfaces = [];
+  purcell.$e$$ion$[session_name].function_queue = [];
   purcell.$e$$ion$[session_name].GLOBAL_NOTE = 0;
   purcell.$e$$ion$[session_name].GLOBAL_OCTAVE = 0;
   purcell.$e$$ion$[session_name].GLOBAL_ACCIDENTAL = null;
@@ -200,7 +201,7 @@ purcell.make_session = function(session_name, ids) {
         .css("color","red");
   }
   purcell.$e$$ion$[session_name].updateCurrentDynamic = function() {
-    console.log("GD", purcell.$e$$ion$[session_name].GLOBAL_DYNAMIC);
+    //console.log("GD", purcell.$e$$ion$[session_name].GLOBAL_DYNAMIC);
     $("#"+session_name+"_currentDynamic").text({
       null : '\u2205',
       'pppppp': "\uE527",
@@ -234,7 +235,7 @@ purcell.make_session = function(session_name, ids) {
   }
   purcell.$e$$ion$[session_name].addNoteN = function(v) {
     if (purcell.$e$$ion$[session_name].s_(purcell.$e$$ion$[session_name].MAX_X) > 400) {
-      console.log("MAX-x,",purcell.$e$$ion$[session_name].s_(purcell.$e$$ion$[session_name].MAX_X));
+      //console.log("MAX-x,",purcell.$e$$ion$[session_name].s_(purcell.$e$$ion$[session_name].MAX_X));
       purcell.$e$$ion$[session_name].GLOBAL_X_SHIFT = -1 * purcell.$e$$ion$[session_name].s_(purcell.$e$$ion$[session_name].MAX_X) + 400;
     }
     purcell.$e$$ion$[session_name].GLOBAL_NOTE = v;
@@ -285,7 +286,7 @@ purcell.make_session = function(session_name, ids) {
     purcell.$e$$ion$[session_name].$0cket.send(JSON.stringify(out));
   }
   purcell.$e$$ion$[session_name].registerBeam = function(data) {
-    console.log("REG BEAM", data);
+    //console.log("REG BEAM", data);
     purcell.$e$$ion$[session_name].GLOBAL_BEAM = data.beam[0]['id'];
   }
   purcell.$e$$ion$[session_name].beamOff = function() {
@@ -303,7 +304,7 @@ purcell.make_session = function(session_name, ids) {
     return purcell.$e$$ion$[session_name].s_(v) + 30;
   }
   purcell.$e$$ion$[session_name].increment_and_execute = function(subsequent, out) {
-    console.log('IEX', out);
+    //console.log('IEX', out);
     out = out != null ? out : [];
     out.push({
       //expected : [],
@@ -325,7 +326,7 @@ purcell.make_session = function(session_name, ids) {
       //expected : ['id'],
       sql : "SELECT graphical_next.prev AS id FROM graphical_next WHERE graphical_next.next IS NULL;"
     });
-    console.log("AAHHHHHH", out);
+    //console.log("AAHHHHHH", out);
     out = {client:purcell.$e$$ion$[session_name].MY_NAME, sql:out, 'return': 'just_me', subsequent: subsequent};
     purcell.$e$$ion$[session_name].$0cket.send(JSON.stringify(out));
   }
@@ -372,7 +373,7 @@ purcell.make_session = function(session_name, ids) {
   }
 
   purcell.$e$$ion$[session_name].addNote_2 = function(data) {
-    console.log("data going to AN_2", data);
+    //console.log("data going to AN_2", data);
     out = [];
     var prev = data['prev'][0]['id'];
     var prev_prev = data['prev_prev'][0]['id'];
@@ -442,7 +443,7 @@ purcell.make_session = function(session_name, ids) {
       expected : [],
       sql: "INSERT INTO graphical_next (id, prev, next) VALUES("+next+","+prev+",NULL);"
     });
-    console.log("checking data for dynamic id", data);
+    //console.log("checking data for dynamic id", data);
     if (data.dynamic_id != null) {
       out = purcell.$e$$ion$[session_name].add_dynamic(data.dynamic_id[0]['id'], next, out);
     }
@@ -452,7 +453,7 @@ purcell.make_session = function(session_name, ids) {
     purcell.$e$$ion$[session_name].$0cket.send(JSON.stringify(out));
   }
   purcell.$e$$ion$[session_name].addBarLine = function(data) {
-    console.log("data going to addBarLine", data);
+    //console.log("data going to addBarLine", data);
     out = [];
     var prev = data['prev'][0]['id'];
     var prev_prev = data['prev_prev'][0]['id'];
@@ -500,7 +501,7 @@ purcell.make_session = function(session_name, ids) {
       elt.attr({fill : c})
     }
     if (elt.attr('stroke') != 'none') {
-      console.log(elt.attr('stroke'))
+      //console.log(elt.attr('stroke'))
       elt.attr({stroke : c})
     }  
   }
@@ -513,7 +514,7 @@ purcell.make_session = function(session_name, ids) {
     purcell.$e$$ion$[session_name].makeCurrentSelectedObjectColor('red');
   }
   purcell.$e$$ion$[session_name].draw = function(data) {
-    console.log("data going to draw", data)
+    //console.log("data going to draw", data)
     purcell.$e$$ion$[session_name].MAX_X = data.max_x[0]['x'];
     for (var surface_index=0; surface_index < purcell.$e$$ion$[session_name].$urfaces.length; surface_index++) {
       purcell.$e$$ion$[session_name].$urfaces[surface_index].clear();
@@ -521,7 +522,7 @@ purcell.make_session = function(session_name, ids) {
       if (data.line_stencil != null) {
         for (var i = 0; i < data.line_stencil.length; i++) {
           var line = data.line_stencil[i];
-          console.log("making line", line);
+          //console.log("making line", line);
           var x = parseFloat(!purcell.is_null(line['x_position']) ? line['x_position'] : 0.0);
           var y = parseFloat(!purcell.is_null(line['y_position']) ? line['y_position'] : 0.0);
           var name = line['name'] ? line['name'] : '';
@@ -540,7 +541,7 @@ purcell.make_session = function(session_name, ids) {
         for (var i = 0; i < data.glyph_stencil.length; i++) {
           var closure = function () {
             var glyph = data.glyph_stencil[i];
-            console.log("making glyph", glyph);
+            //console.log("making glyph", glyph);
             var x = parseFloat(glyph['x']) + parseFloat(!purcell.is_null(glyph['x_position']) ? glyph['x_position'] : 0.0);
             var y = parseFloat(glyph['y']) + parseFloat(!purcell.is_null(glyph['y_position']) ? glyph['y_position'] : 0.0);
             uc = String.fromCharCode(parseInt(glyph['unicode'].substr(2), 16));
@@ -560,26 +561,26 @@ purcell.make_session = function(session_name, ids) {
       if (data.polygon_stencil != null) {
         for (var i = 0; i < data.polygon_stencil.length; i++) {
           var polygon = data.polygon_stencil[i];
-          console.log("PG",polygon);
+          //console.log("PG",polygon);
           if (!polygon_holder[polygon['id']]) {
             polygon_holder[polygon['id']] = {};
           }
           if (!polygon_holder[polygon['id']][polygon['sub_id']]) {
-            console.log("making sub", polygon['sub_id']);
+            //console.log("making sub", polygon['sub_id']);
             polygon_holder[polygon['id']][polygon['sub_id']] = [];
           }
           polygon_holder[polygon['id']][polygon['sub_id']].push(polygon);
         }
-        console.log("PH", polygon_holder);
+        //console.log("PH", polygon_holder);
         for (key in polygon_holder) {
           for (sub_key in polygon_holder[key]) {
             // first, we sort in point order
-            console.log("before sorting", polygon_holder[key][sub_key])
+            //console.log("before sorting", polygon_holder[key][sub_key])
             polygon_holder[key][sub_key].sort(function(a,b)
               {
                 return parseInt(a['point']) - parseInt(b['point']);
               });
-            console.log("after sorting", polygon_holder[key][sub_key])
+            //console.log("after sorting", polygon_holder[key][sub_key])
             // then, iterate
             var path = "";
             for (var i = 0; i < polygon_holder[key][sub_key].length; i++) {
@@ -598,7 +599,7 @@ purcell.make_session = function(session_name, ids) {
           
         }
       }
-      console.log("CSO", purcell.$e$$ion$[session_name].CURRENT_SELECTED_OBJECT);
+      //console.log("CSO", purcell.$e$$ion$[session_name].CURRENT_SELECTED_OBJECT);
         if (purcell.$e$$ion$[session_name].CURRENT_SELECTED_OBJECT) {
           purcell.$e$$ion$[session_name].makeCurrentSelectedObjectColor('red');
       }
