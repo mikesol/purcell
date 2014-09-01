@@ -7,12 +7,6 @@
 
 #include "raw_sql.h"
 
-#define MAX_CONNECTIONS 2048
-
-// have several dbs and 1/0 for used
-static sqlite3 * dbs[MAX_CONNECTIONS]; //*db;
-static int db_used[MAX_CONNECTIONS];
-
 static int sql_length = 0;
 static char * sql_success = NULL;
 static int score_initialized = 0;
@@ -49,34 +43,21 @@ static int callback_purcell(struct libwebsocket_context * context,
                                       enum libwebsocket_callback_reasons reason,
                                       void *user, void *in, size_t len)
 {
+    sqlite3 ** sql_database = (sqlite3 **) (user);
     switch (reason)
     {
     case LWS_CALLBACK_ESTABLISHED:
     {
         printf("connection established\n");
-        int i;
-        for(i = 0; i < MAX_CONNECTIONS; i++) {
-          if (db_used[i] == 0) {
-            db_used[i] = 1;
-            break;
-          }
-        }
-        if (i == MAX_CONNECTIONS) {
-          printf("max connections reached, no sql database being formed\n");
-          i = -1;
-          memcpy(user, &i, sizeof(int));
-          return 0;
-        }
-        memcpy(user, &i, sizeof(int));
         
         char *zErrMsg = 0;
         int rc;
 
-        rc = sqlite3_open(":memory:", &dbs[i]);
+        rc = sqlite3_open(":memory:", sql_database);
         if( rc )
         {
-            fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(dbs[i]));
-            sqlite3_close(dbs[i]);
+            fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(*sql_database));
+            sqlite3_close(*sql_database);
             return(1);
         }
 
@@ -84,7 +65,7 @@ static int callback_purcell(struct libwebsocket_context * context,
         full_sql_program = malloc(raw_sql_len + 1);
         memcpy(full_sql_program, raw_sql, raw_sql_len);
         full_sql_program[raw_sql_len] = '\0';
-        rc = sqlite3_exec(dbs[i], full_sql_program, callback_vanilla, 0, &zErrMsg);
+        rc = sqlite3_exec(*sql_database, full_sql_program, callback_vanilla, 0, &zErrMsg);
         if( rc!=SQLITE_OK )
         {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -114,10 +95,6 @@ static int callback_purcell(struct libwebsocket_context * context,
     }
     case LWS_CALLBACK_RECEIVE:
     {
-        int user_id = (*((int *)user));
-        if (user_id < 0) {
-            return 0;
-        }
         int rc;
         char *in_json;
         in_json = malloc(len + 1);
@@ -173,7 +150,7 @@ static int callback_purcell(struct libwebsocket_context * context,
                             strcpy(request_name, sql_from_json);
                         }
                         //printf("EXECUTING: %s\n", sql_request);
-                        rc = sqlite3_exec(dbs[user_id], sql_request, callback_sql, sql_json_arr, &zErrMsg);
+                        rc = sqlite3_exec(*sql_database, sql_request, callback_sql, sql_json_arr, &zErrMsg);
                         if( rc!=SQLITE_OK )
                         {
                             fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -231,12 +208,7 @@ static int callback_purcell(struct libwebsocket_context * context,
     case LWS_CALLBACK_CLOSED:
     {
       printf("connection closed\n");
-      int user_id = (*((int *)user));
-      if (user_id < 0) {
-        return 0;
-      }
-      sqlite3_close(dbs[user_id]);
-      db_used[user_id] = 0;
+      sqlite3_close(*sql_database);
     }
     default:
         break;
@@ -255,7 +227,7 @@ static struct libwebsocket_protocols protocols[] =
     {
         "purcell-engraving-protocol", // protocol name - very important!
         callback_purcell,   // callback
-        sizeof(int) // we will use a single integer to refer to users
+        sizeof(sqlite3 *) // user is identified by a pointer to its database
     },
     {
         NULL, NULL, 0
@@ -292,11 +264,6 @@ int main(void)
     info.ka_probes = 0;
     info.ka_interval = 0;
     
-    int i;
-    for (i = 0; i < MAX_CONNECTIONS; i++) {
-      db_used[i] = 0;
-    }
-
 
     context = libwebsocket_create_context(&info);
     if (context == NULL)

@@ -28,23 +28,23 @@
              } else {
                $('#sql_result').text('');
              }
-             purcell.draw(data);
+             purcell.$e$$ion$.simple_editor.draw(data);
            }
            function interpret_query() {
              var out = [{name:"information", sql :
              $("#sql_input").val()}];
              purcell.append_standard_graphical_queries(out);
              out = {
-               client:purcell.MY_NAME,
+               client:purcell.$e$$ion$.simple_editor.MY_NAME,
                sql:out,
-               'return': purcell._be(purcell.MY_NAME),
+               'return': purcell._be(purcell.$e$$ion$.simple_editor.MY_NAME),
                subsequent:"processSql"
              };
-             purcell.$0cket.send(JSON.stringify(out));
+             purcell.$e$$ion$.simple_editor.$0cket.send(JSON.stringify(out));
            }
           $(document).ready(function() {
-            $('#spinny').spin();
-            purcell.initialize();
+            $('#simple_editor_spinny').spin();
+            purcell.make_session('simple_editor',['engraving']);
 	    // initialize with a staff, a clef and a time signature
 	    var out = [];
 	    out.push({sql:"INSERT INTO dot_padding (id, val)  VALUES (-1,1.0);"});
@@ -75,7 +75,7 @@
 	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (2);"});
 	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (0);"});
 	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (1);"});
-            purcell.make_websocket(out);
+            purcell.make_websocket('simple_editor',out);
         });	         
 	    </script>
 <style type="text/css">
@@ -103,75 +103,75 @@ body {
 
 				<div id="webpage">
 			      <div class="purcell_content">
-			        <button class="pitch" onclick="purcell.shiftX(null)">&#8635;</button>
-			        <button class="pitch" onclick="purcell.shiftX(90)">&#8606;</button>
-			        <button class="pitch" onclick="purcell.shiftX(30)">&#8592;</button>
-			        <button class="pitch" onclick="purcell.shiftX(-30)">&#8594;</button>
-			        <button class="pitch" onclick="purcell.shiftX(-90)">&#8608;</button>
-			        <button class="pitch" onclick="purcell.shiftX(3.1416)">&#8618;</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.shiftX(null)">&#8635;</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.shiftX(90)">&#8606;</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.shiftX(30)">&#8592;</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.shiftX(-30)">&#8594;</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.shiftX(-90)">&#8608;</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.shiftX(3.1416)">&#8618;</button>
 			      </div>
 			      <!--<canvas id="engraving" width="1000" height="100">
 			      </canvas>-->
 			      <svg id="engraving" width="100%"></svg>
-			      <div id="spinny">
+			      <div id="simple_editor_spinny">
 			      </div>
 			      <div class="purcell_content">
-			        <span class="text-span" id="currentPitch"></span>
-			        <button class="pitch" onclick="purcell.addNoteN(0)">C</button>
-			        <button class="pitch" onclick="purcell.addNoteN(1)">D</button>
-			        <button class="pitch" onclick="purcell.addNoteN(2)">E</button>
-			        <button class="pitch" onclick="purcell.addNoteN(3)">F</button>
-			        <button class="pitch" onclick="purcell.addNoteN(4)">G</button>
-			        <button class="pitch" onclick="purcell.addNoteN(5)">A</button>
-			        <button class="pitch" onclick="purcell.addNoteN(6)">B</button>
-			        <button class="pitch" onclick="purcell.addNoteN(null)">R</button>
-			        <button class="barline" onclick="purcell.addBarLineN()">|</button>
+			        <span class="text-span" id="simple_editor_currentPitch"></span>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(0)">C</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(1)">D</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(2)">E</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(3)">F</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(4)">G</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(5)">A</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(6)">B</button>
+			        <button class="pitch" onclick="purcell.$e$$ion$.simple_editor.addNoteN(null)">R</button>
+			        <button class="barline" onclick="purcell.$e$$ion$.simple_editor.addBarLineN()">|</button>
 			      </div>
 			      <hr>
 			      <div class="purcell_content">
 			        <span class="duration" class="bordered"
-			        style="font-size:30px" id="currentRhythm"></span>
-			        <button class="duration" onclick="purcell.changeDuration(0)">&#xe1d2;</button>
-			        <button class="duration" onclick="purcell.changeDuration(-1)">&#xe1d3;</button>
-			        <button class="duration" onclick="purcell.changeDuration(-2)">&#xe1d5;</button>
-			        <button class="duration" onclick="purcell.changeDuration(-3)">&#xe1d7;</button>
-			        <button class="duration" onclick="purcell.changeDuration(-4)">&#xe1d9;</button>
-			        <button class="duration" onclick="purcell.changeDuration(-5)">&#xe1db;</button>
-			        <button class="duration" onclick="purcell.changeDuration(-6)">&#xe1dd;</button>
-			        <button class="duration" onclick="purcell.changeDuration(-7)">&#xe1df;</button>
+			        style="font-size:30px" id="simple_editor_currentRhythm"></span>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(0)">&#xe1d2;</button>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(-1)">&#xe1d3;</button>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(-2)">&#xe1d5;</button>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(-3)">&#xe1d7;</button>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(-4)">&#xe1d9;</button>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(-5)">&#xe1db;</button>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(-6)">&#xe1dd;</button>
+			        <button class="duration" onclick="purcell.$e$$ion$.simple_editor.changeDuration(-7)">&#xe1df;</button>
 			        &nbsp;
-			        <span style="font-size:30px"  class="bordered" id="currentAccidental"></span>
+			        <span style="font-size:30px"  class="bordered" id="simple_editor_currentAccidental"></span>
 			        &nbsp;
-			        <button class="accidental" onclick="purcell.changeAccidental(null)">&nbsp;</button>
-			        <button class="accidental" onclick="purcell.changeAccidental(-1)">&#xe260;</button>
-			        <button class="accidental" onclick="purcell.changeAccidental(0)">&#xe261;</button>
-			        <button class="accidental" onclick="purcell.changeAccidental(1)">&#xe262;</button>
+			        <button class="accidental" onclick="purcell.$e$$ion$.simple_editor.changeAccidental(null)">&nbsp;</button>
+			        <button class="accidental" onclick="purcell.$e$$ion$.simple_editor.changeAccidental(-1)">&#xe260;</button>
+			        <button class="accidental" onclick="purcell.$e$$ion$.simple_editor.changeAccidental(0)">&#xe261;</button>
+			        <button class="accidental" onclick="purcell.$e$$ion$.simple_editor.changeAccidental(1)">&#xe262;</button>
 			      </div>
 			      <hr>
 			    <div class="purcell_content">
 			    &nbsp;
-	              <span class="bordered" style="font-size:30px"  style="width:80px;" id="currentDynamic"></span>
-	              &nbsp;&nbsp; &nbsp; <button class="dynamic" onclick="purcell.changeDynamic(null)">&nbsp;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('ppp')">&#58666;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('pp')">&#58667;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('p')">&#58656;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('mp')">&#58668;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('mf')">&#58669;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('f')">&#58658;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('ff')">&#58671;</button>
-	              <button class="dynamic" onclick="purcell.changeDynamic('fff')">&#58672;</button>
+	              <span class="bordered" style="font-size:30px"  style="width:80px;" id="simple_editor_currentDynamic"></span>
+	              &nbsp;&nbsp; &nbsp; <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic(null)">&nbsp;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('ppp')">&#58666;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('pp')">&#58667;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('p')">&#58656;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('mp')">&#58668;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('mf')">&#58669;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('f')">&#58658;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('ff')">&#58671;</button>
+	              <button class="dynamic" onclick="purcell.$e$$ion$.simple_editor.changeDynamic('fff')">&#58672;</button>
 	            </div>
 	            <hr>
 			      <div class="purcell_content">
-			        <span class="text-span" style="font-size:20px;" id="currentOctave"></span>
-			        <button class="octave" onclick="purcell.changeOctave(-1)">8vb</button>
-			        <button class="octave" onclick="purcell.changeOctave(1)">8va</button>
+			        <span class="text-span" style="font-size:20px;" id="simple_editor_currentOctave"></span>
+			        <button class="octave" onclick="purcell.$e$$ion$.simple_editor.changeOctave(-1)">8vb</button>
+			        <button class="octave" onclick="purcell.$e$$ion$.simple_editor.changeOctave(1)">8va</button>
 			      </div>
 			      <hr>
 			      <div class="purcell_content">
-			        <span class="text-span" style="font-size:20px;" id="currentBeam"></span>
-			        <button class="beam" onclick="purcell.beamOn()">beam on</button>
-			        <button class="beam" onclick="purcell.beamOff()">beam off</button>
+			        <span class="text-span" style="font-size:20px;" id="simple_editor_currentBeam"></span>
+			        <button class="beam" onclick="purcell.$e$$ion$.simple_editor.beamOn()">beam on</button>
+			        <button class="beam" onclick="purcell.$e$$ion$.simple_editor.beamOff()">beam off</button>
 			      </div>
 			    </div>
 				<div id="sql_result"></div>
