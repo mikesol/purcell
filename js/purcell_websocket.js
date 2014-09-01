@@ -27,6 +27,7 @@ purcell.make_websocket = function(session_name, out) {
     }
     purcell.$e$$ion$[session_name].CURRENT_DATA = evt.data;
     for (var i = 0; i < purcell.$e$$ion$[session_name].function_queue.length; i++) {
+      console.log('executing', purcell.$e$$ion$[session_name].function_queue[i]);
       purcell.$e$$ion$[session_name].function_queue[i]();
     }
     purcell.$e$$ion$[session_name].function_queue = [];

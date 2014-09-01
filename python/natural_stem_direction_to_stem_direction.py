@@ -1,3 +1,5 @@
+### ugggh....beam specialize now irrelevant...
+
 from sqlalchemy.sql.expression import literal, distinct, exists, text, case
 from core_tools import *
 import time
@@ -65,7 +67,7 @@ class _Insert(InsertStmt) :
 
     self.register_stmt(stem_direction_for_beams)
 
-    natural_stem_direction_to_stem_direction = (select([
+    natural_stem_direction_to_stem_direction = select([
       natural_stem_direction.c.id.label('id'),
       case([(stem_direction_for_beams.c.val != None,
           case([(stem_direction_for_beams.c.val > 0, 1)], else_ = -1))],
@@ -73,14 +75,14 @@ class _Insert(InsertStmt) :
     ]).select_from(natural_stem_direction.\
         outerjoin(stem_direction_for_beams,
                    onclause=natural_stem_direction.c.id == stem_direction_for_beams.c.id)).\
-      where(safe_eq_comp(natural_stem_direction.c.id, id)).\
-    cte(name='natural_stem_direction_to_stem_direction')\
-      if not beam_specialize else \
+      where(safe_eq_comp(natural_stem_direction.c.id, id))
+    
+    natural_stem_direction_to_stem_direction = natural_stem_direction_to_stem_direction.union(
     select([
       stem_direction_for_beams.c.id.label('id'),
       case([(stem_direction_for_beams.c.val > 0, 1)], else_ = -1).label('val')
-    ]).\
-    cte(name='natural_stem_direction_to_stem_direction'))
+    ])).\
+    cte(name='natural_stem_direction_to_stem_direction')
 
     self.register_stmt(natural_stem_direction_to_stem_direction)
 
@@ -95,13 +97,18 @@ def generate_ddl(natural_stem_direction, beam, stem_direction) :
   insert_stmt_beam = _Insert(natural_stem_direction, beam, stem_direction, beam_specialize=True)#_InsertBeam(natural_stem_direction, beam, stem_direction)
   del_stmt_beam = _DeleteBeam(beam, stem_direction)
 
-  OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
-     for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [natural_stem_direction]]
+  #OUT += [DDL_unit(table, action, [del_stmt], [insert_stmt])
+  #   for action in ['INSERT', 'UPDATE', 'DELETE']
+  #   for table in [natural_stem_direction]]
 
-  OUT += [DDL_unit(table, action, [del_stmt_beam], [insert_stmt_beam])
+  #OUT += [DDL_unit(table, action, [del_stmt_beam], [insert_stmt_beam])
+  #   for action in ['INSERT', 'UPDATE', 'DELETE']
+  #   for table in [beam]]
+
+  OUT += [DDL_unit(table, action, [del_stmt, del_stmt_beam], [insert_stmt_beam])
      for action in ['INSERT', 'UPDATE', 'DELETE']
-     for table in [beam]]
+     for table in [natural_stem_direction, beam]]
+
 
   return OUT
 
@@ -112,8 +119,8 @@ if __name__ == "__main__" :
   from sqlalchemy import event, DDL
   
   ECHO = False
-  MANUAL_DDL = True
-  #MANUAL_DDL = False
+  #MANUAL_DDL = True
+  MANUAL_DDL = False
   #engine = create_engine('postgresql://localhost/postgres', echo=False)
   engine = create_engine('sqlite:///memory', echo=ECHO)
   conn = engine.connect()
@@ -131,10 +138,19 @@ if __name__ == "__main__" :
 
   stmts = []
 
-  for x in range(10) :
-    stmts.append((Natural_stem_direction, {'id': x,'val': (x % 2) * 2 - 1}))
-    if (x > 2) and (x < 9) :
-      stmts.append((Beam, {'id':x,'val': 15}))
+  #for x in range(10) :
+  #  stmts.append((Natural_stem_direction, {'id': x,'val': (x % 2) * 2 - 1}))
+  #  if (x > 2) and (x < 9) :
+  #    stmts.append((Beam, {'id':x,'val': 15}))
+
+  DIRS = [-1,1,1,1]
+  for x in range(len(DIRS)) :
+    #stmts.append((Natural_stem_direction, {'id': x,'val': DIRS[x]}))
+    stmts.append((Beam, {'id': x,'val': 4}))
+
+  for x in range(len(DIRS)) :
+    stmts.append((Natural_stem_direction, {'id': x,'val': DIRS[x]}))
+  stmts.append((Natural_stem_direction, {'id': 5,'val': 1}))
 
   trans = conn.begin()
   for st in stmts :

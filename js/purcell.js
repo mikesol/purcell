@@ -517,8 +517,9 @@ purcell.make_session = function(session_name, ids) {
     //console.log("data going to draw", data)
     purcell.$e$$ion$[session_name].MAX_X = data.max_x[0]['x'];
     for (var surface_index=0; surface_index < purcell.$e$$ion$[session_name].$urfaces.length; surface_index++) {
-      purcell.$e$$ion$[session_name].$urfaces[surface_index].clear();
-      _gr0up = purcell.$e$$ion$[session_name].$urfaces[surface_index].group().attr({transform:'scale(2,2);'});
+      var current_surface = purcell.$e$$ion$[session_name].$urfaces[surface_index];
+      current_surface.clear();
+      _gr0up = current_surface.group().attr({transform:'scale(2,2);'});
       if (data.line_stencil != null) {
         for (var i = 0; i < data.line_stencil.length; i++) {
           var line = data.line_stencil[i];
@@ -534,7 +535,7 @@ purcell.make_session = function(session_name, ids) {
              strokeWidth : purcell.$e$$ion$[session_name].s_(parseFloat(line['thickness'])),
              'id' : name+'_line_'+line['id']+'_'+line['sub_id'],
           });
-          s_line.click(function() { return function() { purcell.$e$$ion$[session_name].registerAsClicked(s_line) } });
+          //s_line.click(function() { return function() { purcell.$e$$ion$[session_name].registerAsClicked(s_line) } });
         }
       }
       if (data.glyph_stencil != null) {
@@ -552,7 +553,7 @@ purcell.make_session = function(session_name, ids) {
               "font-size" : glyph['font_size'],
                'id' : name+'_glyph_'+glyph['id']+'_'+glyph['sub_id'],
             });
-            s_glyph.click(function() { purcell.$e$$ion$[session_name].registerAsClicked(s_glyph.attr('id'))  } );
+            //s_glyph.click(function() { purcell.$e$$ion$[session_name].registerAsClicked(s_glyph.attr('id'))  } );
           };
           closure();
         }
@@ -592,9 +593,9 @@ purcell.make_session = function(session_name, ids) {
               fill : polygon_holder[key][sub_key][0].fill == 1 ? true : false,
               stroke : 'black',
               strokeWidth : parseFloat(polygon_holder[key][sub_key][0].stroke) * thick,
-             'id' : name+'_polygon_'+polygon['id']+'_'+polygon['sub_id'],
-            }).click(purcell.$e$$ion$[session_name].registerAsClicked);
-            s_polygon.click(function() { return function() { purcell.$e$$ion$[session_name].registerAsClicked(s_polygon) } });
+             'id' : name+'_polygon_'+polygon_holder[key][sub_key][0]['id']+'_'+polygon_holder[key][sub_key][0]['sub_id'],
+            });
+            //s_polygon.click(function() { return function() { purcell.$e$$ion$[session_name].registerAsClicked(s_polygon) } });
           }
           
         }
