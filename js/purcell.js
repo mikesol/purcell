@@ -125,6 +125,7 @@ purcell.make_session = function(session_name, ids) {
 
   purcell.$e$$ion$[session_name].$0cket = null;
   purcell.$e$$ion$[session_name].$urfaces = [];
+  purcell.$e$$ion$[session_name].ids = ids;
   purcell.$e$$ion$[session_name].function_queue = [];
   purcell.$e$$ion$[session_name].GLOBAL_NOTE = 0;
   purcell.$e$$ion$[session_name].GLOBAL_OCTAVE = 0;
@@ -143,7 +144,19 @@ purcell.make_session = function(session_name, ids) {
     purcell.$e$$ion$[session_name].$urfaces[surface_index] = Snap("#"+ids[surface_index]);
   }
 
+  purcell.$e$$ion$[session_name].make_spin = function () {
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      $('#'+cur_id+'_spinny').spin(); // Creates a default Spinner using the text color
+    }
+  }
 
+  purcell.$e$$ion$[session_name].stop_spin = function () {
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      $('#'+cur_id+'_spinny').spin(false); // Creates a default Spinner using the text color
+    }
+  }
   purcell.$e$$ion$[session_name].shiftX = function(v) {
     if (v == null) {
       purcell.$e$$ion$[session_name].GLOBAL_X_SHIFT = 30;
@@ -161,77 +174,96 @@ purcell.make_session = function(session_name, ids) {
   }
 
   purcell.$e$$ion$[session_name].updateCurrentPitch = function() {
-    $("#"+session_name+"_currentPitch").text("C D E F G A B R |".split(" ")[purcell.$e$$ion$[session_name].GLOBAL_NOTE]);
-    $("#"+session_name+"_currentPitch").css('width', "40px").
-         css("display","inline-block").
-         css("text-align","center").
-         css("color","red");
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      console.log("updating pitch div", cur_id);
+      $("#"+cur_id+"_currentPitch").text("C D E F G A B R |".split(" ")[purcell.$e$$ion$[session_name].GLOBAL_NOTE]);
+      $("#"+cur_id+"_currentPitch").css('width', "40px").
+           css("display","inline-block").
+           css("text-align","center").
+           css("color","red");
+    }
   }
   purcell.$e$$ion$[session_name].updateCurrentRhythm = function() {
-    $("#"+session_name+"_currentRhythm").text(['\ue1d2','\ue1d3','\ue1d5','\ue1d7',
-                              '\ue1d9','\ue1db','\ue1dd','\ue1df'][purcell.$e$$ion$[session_name].GLOBAL_DURATION * -1]);
-    $("#"+session_name+"_currentRhythm").css('font-family', 'Bravura')
-        .css('width', "20px")
-        .css("display","inline-block")
-        .css("text-align","center")
-        .css("color","red");
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      $("#"+cur_id+"_currentRhythm").text(['\ue1d2','\ue1d3','\ue1d5','\ue1d7',
+                                '\ue1d9','\ue1db','\ue1dd','\ue1df'][purcell.$e$$ion$[session_name].GLOBAL_DURATION * -1]);
+      $("#"+cur_id+"_currentRhythm").css('font-family', 'Bravura')
+          .css('width', "20px")
+          .css("display","inline-block")
+          .css("text-align","center")
+          .css("color","red");
+    }
   }
   purcell.$e$$ion$[session_name].updateCurrentAccidental = function() {
-    $("#"+session_name+"_currentAccidental").text(['\u2205','\ue260','\ue261','\ue262'
-       ][purcell.$e$$ion$[session_name].GLOBAL_ACCIDENTAL == null ?
-       0 : purcell.$e$$ion$[session_name].GLOBAL_ACCIDENTAL + 2]);
-    $("#"+session_name+"_currentAccidental").css('font-family', 'Bravura')
-        .css('width', "20px")
-        .css("display","inline-block")
-        .css("text-align","center")
-        .css("color","red");
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      $("#"+cur_id+"_currentAccidental").text(['\u2205','\ue260','\ue261','\ue262'
+         ][purcell.$e$$ion$[session_name].GLOBAL_ACCIDENTAL == null ?
+         0 : purcell.$e$$ion$[session_name].GLOBAL_ACCIDENTAL + 2]);
+      $("#"+cur_id+"_currentAccidental").css('font-family', 'Bravura')
+          .css('width', "20px")
+          .css("display","inline-block")
+          .css("text-align","center")
+          .css("color","red");
+    }
   }
   purcell.$e$$ion$[session_name].updateCurrentOctave = function() {
-    $("#"+session_name+"_currentOctave").text(purcell.$e$$ion$[session_name].GLOBAL_OCTAVE);
-    $("#"+session_name+"_currentOctave").css('width', "40px")
-         .css("display","inline-block")
-         .css("text-align","center")
-         .css("color","red");
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      $("#"+cur_id+"_currentOctave").text(purcell.$e$$ion$[session_name].GLOBAL_OCTAVE);
+      $("#"+cur_id+"_currentOctave").css('width', "40px")
+           .css("display","inline-block")
+           .css("text-align","center")
+           .css("color","red");
+    }
   }
   purcell.$e$$ion$[session_name].updateCurrentBeam = function() {
-    $("#"+session_name+"_currentBeam").text(purcell.$e$$ion$[session_name].GLOBAL_BEAM_FLAG ? "ON" : "OFF");
-    $("#"+session_name+"_currentBeam").css('width', "80px")
-        .css("display","inline-block")
-        .css("text-align","center")
-        .css("color","red");
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      $("#"+cur_id+"_currentBeam").text(purcell.$e$$ion$[session_name].GLOBAL_BEAM_FLAG ? "ON" : "OFF");
+      $("#"+cur_id+"_currentBeam").css('width', "80px")
+          .css("display","inline-block")
+          .css("text-align","center")
+          .css("color","red");
+    }
   }
   purcell.$e$$ion$[session_name].updateCurrentDynamic = function() {
     //console.log("GD", purcell.$e$$ion$[session_name].GLOBAL_DYNAMIC);
-    $("#"+session_name+"_currentDynamic").text({
-      null : '\u2205',
-      'pppppp': "\uE527",
-      'ppppp': "\uE528",
-      'pppp': "\uE529",
-      'ppp': "\uE52A",
-      'pp': "\uE52B",
-      'p': "\uE520",
-      'mp': "\uE52C",
-      'mf': "\uE52D",
-      'p': "\uE520",
-      'pf': "\uE52E",
-      'f': "\uE522",
-      'ff': "\uE52F",
-      'fff': "\uE530",
-      'ffff': "\uE531",
-      'fffff': "\uE532",
-      'ffffff': "\uE533",
-      'fp': "\uE534",
-      'fz': "\uE535",
-      'sf': "\uE536",
-      'sfp': "\uE537",
-      'sfpp': "\uE538",
-      'sfz': "\uE539"
-       }[purcell.$e$$ion$[session_name].GLOBAL_DYNAMIC]);
-    $("#"+session_name+"_currentDynamic").css('font-family', 'Bravura')
-        .css('width', "20px")
-        .css("display","inline-block")
-        .css("text-align","center")
-        .css("color","red");
+    for (var i=0; i < purcell.$e$$ion$[session_name].ids.length; i++) {
+      var cur_id = purcell.$e$$ion$[session_name].ids[i];
+      $("#"+cur_id+"_currentDynamic").text({
+        null : '\u2205',
+        'pppppp': "\uE527",
+        'ppppp': "\uE528",
+        'pppp': "\uE529",
+        'ppp': "\uE52A",
+        'pp': "\uE52B",
+        'p': "\uE520",
+        'mp': "\uE52C",
+        'mf': "\uE52D",
+        'p': "\uE520",
+        'pf': "\uE52E",
+        'f': "\uE522",
+        'ff': "\uE52F",
+        'fff': "\uE530",
+        'ffff': "\uE531",
+        'fffff': "\uE532",
+        'ffffff': "\uE533",
+        'fp': "\uE534",
+        'fz': "\uE535",
+        'sf': "\uE536",
+        'sfp': "\uE537",
+        'sfpp': "\uE538",
+        'sfz': "\uE539"
+         }[purcell.$e$$ion$[session_name].GLOBAL_DYNAMIC]);
+      $("#"+cur_id+"_currentDynamic").css('font-family', 'Bravura')
+          .css('width', "20px")
+          .css("display","inline-block")
+          .css("text-align","center")
+          .css("color","red");
+    }
   }
   purcell.$e$$ion$[session_name].addNoteN = function(v) {
     if (purcell.$e$$ion$[session_name].s_(purcell.$e$$ion$[session_name].MAX_X) > 400) {
@@ -244,11 +276,12 @@ purcell.make_session = function(session_name, ids) {
     if (purcell.$e$$ion$[session_name].GLOBAL_DYNAMIC != null) {
       out = purcell.dynamic_increment(out);
     }
-    $('#'+session_name+'_spinny').spin(); // Creates a default Spinner using the text color
+    purcell.$e$$ion$[session_name].make_spin();
+    //$('#'+session_name+'_spinny').spin(); // Creates a default Spinner using the text color
     purcell.$e$$ion$[session_name].increment_and_execute("purcell.$e$$ion$."+session_name+".addNote_2",out);
   }
   purcell.$e$$ion$[session_name].addBarLineN = function() {
-    $('#'+session_name+'_spinny').spin(); // Creates a default Spinner using the text color
+    //$('#'+session_name+'_spinny').spin(); // Creates a default Spinner using the text color
     purcell.$e$$ion$[session_name].increment_and_execute("purcell.$e$$ion$."+session_name+".addBarLine");
   }
   purcell.$e$$ion$[session_name].changeDuration = function(v) {
@@ -605,7 +638,8 @@ purcell.make_session = function(session_name, ids) {
           purcell.$e$$ion$[session_name].makeCurrentSelectedObjectColor('red');
       }
     }
-    $('#'+session_name+'_spinny').spin(false); // Stops and removes the spinner.
+    purcell.$e$$ion$[session_name].stop_spin();
+    //$('#'+session_name+'_spinny').spin(false); // Stops and removes the spinner.
   }
 
   purcell.$e$$ion$[session_name].updateCurrentPitch();
