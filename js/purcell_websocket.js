@@ -3,8 +3,9 @@ purcell.make_websocket = function(session_name, attrs) {
   var initialize = attrs.initialize;
   var cache = attrs.cache;
   var pwd = attrs.pwd;
+  var ws_url = attrs.ws_url;
   console.log(out, initialize, cache, pwd);
-  purcell.$e$$ion$[session_name].$0cket = new WebSocket("ws://localhost:9000", 'purcell-engraving-protocol');
+  purcell.$e$$ion$[session_name].$0cket = new WebSocket(ws_url ? ws_url : "ws://localhost:9000", 'purcell-engraving-protocol');
   purcell.$e$$ion$[session_name].$0cket.onopen = function() {
     var init =  {
            client:purcell.$e$$ion$[session_name].MY_NAME,
