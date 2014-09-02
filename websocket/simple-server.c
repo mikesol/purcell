@@ -38,7 +38,7 @@ static int callback_http(struct libwebsocket_context * context,
     return 0;
 }
 
-static int loadSave_sql_database(const char *zFilename, const char *password, sqlite3 *pInMemory, int isSave) {//printf("zFilename %s\n", zFilename);
+static int loadSave_sql_database(const char *zFilename, const char *password, sqlite3 *pInMemory, int isSave) {
     if (isSave && password && (strcmp(password, PASSWORD) != 0)) {
       printf("failed validation");
       return -1;
