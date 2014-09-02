@@ -1,12 +1,23 @@
-purcell.make_websocket = function(session_name, out) {
-  purcell.$e$$ion$[session_name].$0cket = new WebSocket("ws://guido.grame.fr:9000", 'purcell-engraving-protocol');
+purcell.make_websocket = function(session_name, out, initialize, cache, pwd) {
+  purcell.$e$$ion$[session_name].$0cket = new WebSocket("ws://localhost:9000", 'purcell-engraving-protocol');
   purcell.$e$$ion$[session_name].$0cket.onopen = function() {
+    var init =  {
+           client:purcell.$e$$ion$[session_name].MY_NAME,
+           initialize : initialize ? initialize : '',
+           'return': 'just_me',
+      }
+    purcell.$e$$ion$[session_name].$0cket.send(JSON.stringify(
+    init
+    ));
     out = {
            client:purcell.$e$$ion$[session_name].MY_NAME,
-           initializing:true,
            sql:out,
            'return': 'just_me',
           };
+    if (cache) {
+      out.cache_path = cache;
+      out.password = pwd;
+    }
     purcell.$e$$ion$[session_name].$0cket.send(JSON.stringify(out));
     out = [];
     purcell.append_standard_graphical_queries(out);

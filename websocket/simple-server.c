@@ -9,7 +9,7 @@
 
 static int sql_length = 0;
 static char * sql_success = NULL;
-static int score_initialized = 0;
+static char *PASSWORD;
 
 static int callback_sql(void *result_json_arr_v, int argc, char **argv, char **azColName)
 {
@@ -38,6 +38,70 @@ static int callback_http(struct libwebsocket_context * context,
     return 0;
 }
 
+static int loadSave_sql_database(const char *zFilename, const char *password, sqlite3 *pInMemory, int isSave) {//printf("zFilename %s\n", zFilename);
+    if (isSave && password && (strcmp(password, PASSWORD) != 0)) {
+      printf("failed validation");
+      return -1;
+    }
+    
+    int rc;                   /* Function return code */
+    sqlite3 *pFile;           /* Database connection opened on zFilename */
+    sqlite3_backup *pBackup;  /* Backup object used to copy data */
+    sqlite3 *pTo;             /* Database to copy to (pFile or pInMemory) */
+    sqlite3 *pFrom;           /* Database to copy from (pFile or pInMemory) */
+
+    /* Open the database file identified by zFilename. Exit early if this fails
+    ** for any reason. */
+    rc = sqlite3_open(zFilename, &pFile);
+    if( rc==SQLITE_OK ){
+
+      /* If this is a 'load' operation (isSave==0), then data is copied
+      ** from the database file just opened to database pInMemory. 
+      ** Otherwise, if this is a 'save' operation (isSave==1), then data
+      ** is copied from pInMemory to pFile.  Set the variables pFrom and
+      ** pTo accordingly. */
+      pFrom = (isSave ? pInMemory : pFile);
+      pTo   = (isSave ? pFile     : pInMemory);
+
+      /* Set up the backup procedure to copy from the "main" database of 
+      ** connection pFile to the main database of connection pInMemory.
+      ** If something goes wrong, pBackup will be set to NULL and an error
+      ** code and  message left in connection pTo.
+      **
+      ** If the backup object is successfully created, call backup_step()
+      ** to copy data from pFile to pInMemory. Then call backup_finish()
+      ** to release resources associated with the pBackup object.  If an
+      ** error occurred, then  an error code and message will be left in
+      ** connection pTo. If no error occurred, then the error code belonging
+      ** to pTo is set to SQLITE_OK.
+      */
+      pBackup = sqlite3_backup_init(pTo, "main", pFrom, "main");
+      if( pBackup ){
+        (void)sqlite3_backup_step(pBackup, -1);
+        (void)sqlite3_backup_finish(pBackup);
+      }
+      rc = sqlite3_errcode(pTo);
+    }
+    return rc;
+}
+
+
+static void initialize_sql_database_to_blank(sqlite3* sql_database) {
+    int rc;
+    char *zErrMsg = 0;
+    char *full_sql_program = NULL;
+    full_sql_program = malloc(raw_sql_len + 1);
+    memcpy(full_sql_program, raw_sql, raw_sql_len);
+    full_sql_program[raw_sql_len] = '\0';
+    rc = sqlite3_exec(sql_database, full_sql_program, callback_vanilla, 0, &zErrMsg);
+    if( rc!=SQLITE_OK )
+    {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+    }
+    free(full_sql_program);
+}
+
 static int callback_purcell(struct libwebsocket_context * context,
                                       struct libwebsocket *wsi,
                                       enum libwebsocket_callback_reasons reason,
@@ -50,7 +114,6 @@ static int callback_purcell(struct libwebsocket_context * context,
     {
         printf("connection established\n");
         
-        char *zErrMsg = 0;
         int rc;
 
         rc = sqlite3_open(":memory:", sql_database);
@@ -60,18 +123,6 @@ static int callback_purcell(struct libwebsocket_context * context,
             sqlite3_close(*sql_database);
             return(1);
         }
-
-        char *full_sql_program = NULL;
-        full_sql_program = malloc(raw_sql_len + 1);
-        memcpy(full_sql_program, raw_sql, raw_sql_len);
-        full_sql_program[raw_sql_len] = '\0';
-        rc = sqlite3_exec(*sql_database, full_sql_program, callback_vanilla, 0, &zErrMsg);
-        if( rc!=SQLITE_OK )
-        {
-            fprintf(stderr, "SQL error: %s\n", zErrMsg);
-            sqlite3_free(zErrMsg);
-        }
-        free(full_sql_program);
         break;
     }
     case LWS_CALLBACK_SERVER_WRITEABLE:
@@ -96,14 +147,17 @@ static int callback_purcell(struct libwebsocket_context * context,
     case LWS_CALLBACK_RECEIVE:
     {
         int rc;
-        char *in_json;
+        char *in_json = NULL;
+        char* initializing = NULL;
+        char *global_cache_path = NULL;
+        char *global_password = NULL;
+
         in_json = malloc(len + 1);
         memcpy(in_json, in, len);
         in_json[len] = '\0';
         json_error_t json_error;
         json_t *request_root = json_loads( in_json, 0, &json_error );
         json_t *response_root = json_object();
-        int initializing = 0;
         int just_me = 1;
 
         if( request_root )
@@ -114,14 +168,43 @@ static int callback_purcell(struct libwebsocket_context * context,
                 const char *perhaps_unnecessary = json_string_value( jsonReturn );
                 just_me = strcmp(perhaps_unnecessary, "everyone") != 0;
             }
-            json_t *jsonInitializing = json_object_get( request_root, "initializing" );
-            if (json_is_boolean( jsonInitializing ))
+            json_t *jsonInitializing = json_object_get( request_root, "initialize" );
+            if (json_is_string( jsonInitializing ))
             {
-                initializing = json_integer_value ( jsonInitializing );
+                const char *sql_from_json = json_string_value( jsonInitializing );
+                initializing = malloc(strlen(sql_from_json) + 1);
+                strcpy(initializing, sql_from_json);
             }
-            if (( initializing == 0 ) | ((initializing == 1) && (score_initialized == 0)))
+            //////////////////
+            json_t *jsonPassword = json_object_get( request_root, "password" );
+            if( json_is_string( jsonPassword ) )
             {
-                score_initialized = 1;
+                const char *sql_from_json = json_string_value( jsonPassword );
+                global_password = malloc(strlen(sql_from_json) + 1);
+                strcpy(global_password, sql_from_json);
+            }
+            //////////////////
+            json_t *jsonCachePath = json_object_get( request_root, "cache_path" );
+            if( json_is_string( jsonCachePath ) )
+            {
+                const char *sql_from_json = json_string_value( jsonCachePath );
+                global_cache_path = malloc(strlen(sql_from_json) + 1);
+                strcpy(global_cache_path, sql_from_json);
+            }
+            if (initializing)
+            {
+              if (strcmp(initializing, "") == 0) {
+                initialize_sql_database_to_blank(*sql_database);
+              } else {
+                rc = loadSave_sql_database(initializing, 0, *sql_database, 0);
+                if (rc != SQLITE_OK) {
+                  printf("could not initialize from database - creating blank");
+                  initialize_sql_database_to_blank(*sql_database);
+                }
+              }
+            }
+            else
+            {
                 json_t *jsonArr = json_object_get( request_root, "sql" );
                 if (json_is_array( jsonArr ))
                 {
@@ -131,6 +214,8 @@ static int callback_purcell(struct libwebsocket_context * context,
                     {
                         char *sql_request = NULL;
                         char *request_name = NULL;
+                        char *cache_path = NULL;
+                        char *password = NULL;
                         json_t *jsonObject = json_array_get( jsonArr, idx );
                         json_t *sql_json_arr = json_array();
                         json_t *jsonData = json_object_get( jsonObject, "sql" );
@@ -140,6 +225,22 @@ static int callback_purcell(struct libwebsocket_context * context,
                             const char *sql_from_json = json_string_value( jsonData );
                             sql_request = malloc(strlen(sql_from_json) + 1);
                             strcpy(sql_request, sql_from_json);
+                        }
+                        //////////////////
+                        jsonData = json_object_get( jsonObject, "password" );
+                        if( json_is_string( jsonData ) )
+                        {
+                            const char *sql_from_json = json_string_value( jsonData );
+                            password = malloc(strlen(sql_from_json) + 1);
+                            strcpy(password, sql_from_json);
+                        }
+                        //////////////////
+                        jsonData = json_object_get( jsonObject, "cache_path" );
+                        if( json_is_string( jsonData ) )
+                        {
+                            const char *sql_from_json = json_string_value( jsonData );
+                            cache_path = malloc(strlen(sql_from_json) + 1);
+                            strcpy(cache_path, sql_from_json);
                         }
                         //////////////////
                         jsonData = json_object_get( jsonObject, "name" );
@@ -161,18 +262,44 @@ static int callback_purcell(struct libwebsocket_context * context,
                             //printf("SQL success!\n");
                         }
 
+                        if (cache_path) {
+                          rc = loadSave_sql_database(cache_path, password, *sql_database, 1);
+                          if( rc!=SQLITE_OK )
+                          {
+                              printf("Caching did not work.\n");
+                          }
+                          
+                        }
                         json_object_set_new( response_root, request_name ? request_name : "anonymous", sql_json_arr );
-                        free(sql_request);
-                        free(request_name);
+                        if (sql_request) {
+                          free(sql_request);
+                        }
+                        if (request_name) {
+                          free(request_name);
+                        }
+                        if (cache_path) {
+                          free(cache_path);
+                        }
+                        if (password) {
+                          free(password);
+                        }
                     }
                 }
-                json_t *jsonSubsequent = json_object_get( request_root, "subsequent" );
-                if (json_is_string( jsonSubsequent ))
-                {
-                    // hmmm...overkill?
-                    const char *perhaps_unnecessary = json_string_value( jsonSubsequent );
-                    json_object_set_new( response_root, "subsequent", json_string( perhaps_unnecessary ) );
-                }
+            }
+            if (global_cache_path) {
+              rc = loadSave_sql_database(global_cache_path, global_password, *sql_database, 1);
+              if( rc!=SQLITE_OK )
+              {
+                  printf("Caching did not work.\n");
+              }
+              
+            }
+            json_t *jsonSubsequent = json_object_get( request_root, "subsequent" );
+            if (json_is_string( jsonSubsequent ))
+            {
+                // hmmm...overkill?
+                const char *perhaps_unnecessary = json_string_value( jsonSubsequent );
+                json_object_set_new( response_root, "subsequent", json_string( perhaps_unnecessary ) );
             }
             // free json!
             json_decref( request_root );
@@ -193,7 +320,12 @@ static int callback_purcell(struct libwebsocket_context * context,
         json_decref( response_root );
         sql_length = strlen(sql_success);
 
-        free(in_json);
+        if (in_json) {
+          free(in_json);
+        }
+        if (initializing) {
+          free(initializing);
+        }
         //if (just_me)
         //{
            libwebsocket_callback_on_writable(context, wsi);
@@ -234,10 +366,67 @@ static struct libwebsocket_protocols protocols[] =
     }
 };
 
+long slurp(char const* path, char **buf, int add_nul)
+{
+    FILE  *fp;
+    size_t fsz;
+    long   off_end;
+    int    rc;
+
+    /* Open the file */
+    fp = fopen(path, "r");
+    if( NULL == fp ) {
+        return -1L;
+    }
+
+    /* Seek to the end of the file */
+    rc = fseek(fp, 0L, SEEK_END);
+    if( 0 != rc ) {
+        return -1L;
+    }
+
+    /* Byte offset to the end of the file (size) */
+    if( 0 > (off_end = ftell(fp)) ) {
+        return -1L;
+    }
+    fsz = (size_t)off_end;
+
+    /* Allocate a buffer to hold the whole file */
+    *buf = malloc( fsz+add_nul );
+    if( NULL == *buf ) {
+        return -1L;
+    }
+
+    /* Rewind file pointer to start of file */
+    rewind(fp);
+
+    /* Slurp file into buffer */
+    if( fsz != fread(*buf, 1, fsz, fp) ) {
+        free(*buf);
+        return -1L;
+    }
+
+    /* Close the file */
+    if( EOF == fclose(fp) ) {
+        free(*buf);
+        return -1L;
+    }
+
+    if( add_nul ) {
+        /* Make sure the buffer is NUL-terminated, just in case */
+        (*buf)[fsz] = '\0';
+    }
+
+    /* Return the file size */
+    return (long)fsz;
+}
+
+
 int main(void)
 {
     // server url will be http://localhost:9000
     int port = 9000;
+    slurp("password.txt",&PASSWORD,1);
     const char *interface = NULL;
     struct libwebsocket_context *context;
     // we're not using ssl
@@ -285,5 +474,8 @@ int main(void)
     }
 
     libwebsocket_context_destroy(context);
+    if (PASSWORD) {
+      free(PASSWORD);
+    }
     return 0;
 }
