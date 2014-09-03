@@ -1,7 +1,7 @@
 # Purcelll
 
-This system, provisionally callled purcell, is a hack to show that SQL
-can be used to typeset music and retrieve data about it.
+purcell implements a relational model of music engraving, using SQL queries to
+insert, update, delete and select elements of a musical score.
 
 # Dependencies for pure SQL
 
