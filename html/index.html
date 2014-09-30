@@ -46,6 +46,10 @@
             $('#simple_editor_spinny').spin();
             purcell.make_session('simple_editor',['engraving']);
 	    // initialize with a staff, a clef and a time signature
+	    purcell.$e$$ion$.simple_editor.function_queue.push(
+	      function() {
+                $('#simple_editor_spinny').spin(false);
+              });
 	    var out = [];
 	    out.push({sql:"INSERT INTO dot_padding (id, val)  VALUES (-1,1.0);"});
 	    out.push({sql:"INSERT INTO dynamic_padding (id, val)  VALUES (-1,1.5);"});
@@ -75,7 +79,7 @@
 	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (2);"});
 	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (0);"});
 	    out.push({sql:"INSERT INTO used_ids (id)  VALUES (1);"});
-            purcell.make_websocket('simple_editor',out);
+            purcell.make_websocket('simple_editor',{out:out});
         });	         
 	    </script>
 <style type="text/css">
