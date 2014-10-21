@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-include(LibFindMacros.cmake)
+include(../cmake/LibFindMacros.cmake)
 
 project(simple_server)
 

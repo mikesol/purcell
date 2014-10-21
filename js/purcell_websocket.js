@@ -6,6 +6,21 @@ purcell.make_websocket = function(session_name, attrs) {
   var ws_url = attrs.ws_url;
   console.log(out, initialize, cache, pwd);
   purcell.$e$$ion$[session_name].$0cket = new WebSocket(ws_url ? ws_url : "ws://localhost:9000", 'purcell-engraving-protocol');
+  purcell.$e$$ion$[session_name].$0cket.onmessage = function(evt) {
+    console.log("RECEIVED DATA", evt.data);
+    json = eval("("+evt.data+")")
+    var subsequent = json['subsequent'];
+    console.log("subs", json['subsequent']);
+    if (subsequent) {
+      eval(subsequent+"("+evt.data+")");
+    }
+    purcell.$e$$ion$[session_name].CURRENT_DATA = evt.data;
+    for (var i = 0; i < purcell.$e$$ion$[session_name].function_queue.length; i++) {
+      console.log('executing', purcell.$e$$ion$[session_name].function_queue[i]);
+      purcell.$e$$ion$[session_name].function_queue[i]();
+    }
+    purcell.$e$$ion$[session_name].function_queue = [];
+  }
   purcell.$e$$ion$[session_name].$0cket.onopen = function() {
     var init =  {
            client:purcell.$e$$ion$[session_name].MY_NAME,
@@ -34,20 +49,5 @@ purcell.make_websocket = function(session_name, attrs) {
            subsequent:"purcell.$e$$ion$."+session_name+".draw"
           };
     purcell.$e$$ion$[session_name].$0cket.send(JSON.stringify(out));
-  }
-  purcell.$e$$ion$[session_name].$0cket.onmessage = function(evt) {
-    console.log("RECEIVED DATA", evt.data);
-    json = eval("("+evt.data+")")
-    var subsequent = json['subsequent'];
-    console.log("subs", json['subsequent']);
-    if (subsequent) {
-      eval(subsequent+"("+evt.data+")");
-    }
-    purcell.$e$$ion$[session_name].CURRENT_DATA = evt.data;
-    for (var i = 0; i < purcell.$e$$ion$[session_name].function_queue.length; i++) {
-      console.log('executing', purcell.$e$$ion$[session_name].function_queue[i]);
-      purcell.$e$$ion$[session_name].function_queue[i]();
-    }
-    purcell.$e$$ion$[session_name].function_queue = [];
   }
 }
