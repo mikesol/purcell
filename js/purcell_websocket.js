@@ -36,6 +36,7 @@ purcell.make_websocket = function(session_name, attrs) {
     purcell.$e$$ion$[session_name].$0cket.send(JSON.stringify(out));
   }
   purcell.$e$$ion$[session_name].$0cket.onmessage = function(evt) {
+    console.log("RECEIVED DATA", evt.data);
     json = eval("("+evt.data+")")
     var subsequent = json['subsequent'];
     console.log("subs", json['subsequent']);
