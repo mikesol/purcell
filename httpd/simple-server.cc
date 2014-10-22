@@ -10,6 +10,7 @@
 #include <sqlite3.h>
 #include <jansson.h>
 
+#include <map>
 #include <vector>
  
 #include "raw_sql.h"
@@ -24,7 +25,8 @@
 
 using namespace std;
 
-vector<pair<string, sqlite3** > > SQLITE_DATABASES;
+map<string, sqlite3** > SQLITE_DATABASES;
+vector<string> DATABASE_QUEUE;
 
 static char *PASSWORD;
 
@@ -125,21 +127,22 @@ struct connection_info_struct
 
 sqlite3 ** get_sqlite_database_for_client (string client)
 {
-  for (int i = 0; i < SQLITE_DATABASES.size(); i++) {
-    if (SQLITE_DATABASES[i].first == client) {
-      return SQLITE_DATABASES[i].second;
-    }
+  if (SQLITE_DATABASES.find(client) != SQLITE_DATABASES.end() ) {
+    return SQLITE_DATABASES[client];
   }
   
-  SQLITE_DATABASES.push_back(pair<string, sqlite3 **> (client, (sqlite3 **)malloc(sizeof(sqlite3 *))));
-  sqlite3_open(":memory:", SQLITE_DATABASES[SQLITE_DATABASES.size() - 1].second);
+  SQLITE_DATABASES[client] = (sqlite3 **)malloc(sizeof(sqlite3 *));
+  DATABASE_QUEUE.push_back(client);
+  sqlite3_open(":memory:", SQLITE_DATABASES[client]);
 
-  if (SQLITE_DATABASES.size() >= MAXSiZE) {
-    sqlite3_close(*SQLITE_DATABASES[0].second);
-    SQLITE_DATABASES.erase(SQLITE_DATABASES.begin());
+  if (DATABASE_QUEUE.size() >= MAXSiZE) {
+    sqlite3_close(*SQLITE_DATABASES[DATABASE_QUEUE[0]]);
+    free(SQLITE_DATABASES[DATABASE_QUEUE[0]]);
+    SQLITE_DATABASES.erase(DATABASE_QUEUE[0]);
+    DATABASE_QUEUE.erase(DATABASE_QUEUE.begin());
   }
   
-  return SQLITE_DATABASES[SQLITE_DATABASES.size() - 1].second;
+  return SQLITE_DATABASES[client];
 }
 
 static int
