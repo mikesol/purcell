@@ -24,10 +24,10 @@ to make the pure SQL.  Then
 
 # Running the websocket test
 
-Then, from the cmake directory, do:
+Then, from the build directory, do:
 
 ```
-cmake -G "Unix Makefiles"
+cmake ../websocket/
 make
 ```
 
